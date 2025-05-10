@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">AlephUp</string>
+    <string name="onboarding_title">AlephUp</string>
+    <string name="onboarding_subtitle">Take attendance using Aleph Wifi Connection</string>
+    <string name="onboarding_description">This app needs permissions to access your wifi network to verify your attendance</string>
+    <string name="onboarding_note">* No personal or private data is collected</string>
+    <string name="onboarding_button_grant">GRANT</string>
+    <string name="onboarding_button_next">NEXT</string>
+    <string name="onboarding_label_required">Required</string>
+    <string name="onboarding_label_optional">Optional</string>
+    <string name="onboarding_permission_network">Network Permission</string>
+    <string name="onboarding_permission_notification">Notification Permission</string>
+</resources>
