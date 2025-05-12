@@ -64,6 +64,4 @@ dependencies {
     implementation(platform(libs.koin.bom))
     implementation(libs.koin.android)
 
-//    debugImplementation(libs.chucker.debug)
-//    releaseImplementation(libs.chucker.release)
 }

@@ -7,7 +7,28 @@
     <string name="onboarding_button_grant">GRANT</string>
     <string name="onboarding_button_next">NEXT</string>
     <string name="onboarding_label_required">Required</string>
-    <string name="onboarding_label_optional">Optional</string>
-    <string name="onboarding_permission_network">Network Permission</string>
-    <string name="onboarding_permission_notification">Notification Permission</string>
+    <string name="onboarding_permission_location">Allow location permission</string>
+    <string name="onboarding_permission_location_description">Required to accurately verify attendance using Wi-Fi</string>
+
+    <string name="connected_to">Connected to: %s</string>
+    <string name="not_connected">Not Connected</string>
+    <string name="enable_optional_settings">To ensure consistent automatic attendance, you can enable optional settings below</string>
+
+    <string name="battery_optimization">Battery Optimization</string>
+    <string name="excluded_from_battery_optimization">Excluded from battery optimization</string>
+    <string name="excluded_from_battery_optimization_description">This allows the app to run in the background without being killed by the system\'s battery saving features.</string>
+    <string name="open_battery_optimization_settings">Open Battery Optimization Settings</string>
+
+    <string name="background_service">Background Service</string>
+    <string name="allow_location_permission_all_the_time">Allow location permission all the time</string>
+    <string name="required_for_wifi_monitoring">Required to accurately verify attendance using Wi-Fi in the background</string>
+
+    <string name="allow_notifications">Allow notifications</string>
+    <string name="required_for_background_notification">Required by Android to inform you that this app is running in the background</string>
+
+    <string name="start_service_on_boot">Start background service on boot</string>
+    <string name="start_service_on_boot_description">Automatically starts the background service when your device turns on</string>
+
+    <string name="enable_background_service">Enable Background Service</string>
+    <string name="disable_background_service">Disable Background Service</string>
 </resources>

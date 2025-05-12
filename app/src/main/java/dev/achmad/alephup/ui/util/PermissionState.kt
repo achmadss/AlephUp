@@ -29,7 +29,7 @@ class MultiplePermissionsState internal constructor(
 
 @Composable
 fun rememberPermissionState(
-    permission: String
+    permission: String,
 ): PermissionState {
     val context = LocalContext.current
     val activity = LocalActivity.current

@@ -20,323 +20,320 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.update
 
 /**
- * Data class representing Wi-Fi connection information
+ * Data class representing Wi-Fi connection information.
  */
 data class WifiConnectionInfo(
     val ssid: String = "",
     val bssid: String = "", // MAC address
     val ipAddress: String = "",
-    val linkSpeed: Int = 0,
-    val frequency: Int = 0,
-    val signalStrength: Int = 0,
+    val linkSpeed: Int = 0, // Mbps
+    val frequency: Int = 0, // MHz
+    val signalStrength: Int = 0, // Calculated signal level (typically 0-99 or similar range)
     val networkId: Int = -1,
-    val capabilities: String = "",
+    val capabilities: String = "", // Formatted string of capabilities
     val isConnected: Boolean = false
 )
 
 /**
- * Helper class to monitor Wi-Fi connections and provide callbacks for network changes
+ * Represents the various states of Wi-Fi connectivity that can be emitted by the [WifiMonitor].
  */
-@SuppressLint("MissingPermission")
+sealed interface WifiState {
+    /** Initial state emitted when the monitoring flow starts. */
+    data object Init : WifiState
+    /** Indicates that Wi-Fi has connected, providing current connection details. */
+    data class Connected(val wifiInfo: WifiConnectionInfo) : WifiState
+    /** Indicates that Wi-Fi has disconnected. */
+    data object Disconnected : WifiState
+    /** Indicates that Wi-Fi connection information has changed while remaining connected. */
+    data class InfoChanged(val wifiInfo: WifiConnectionInfo) : WifiState
+}
+
+/**
+ * Helper class to monitor Wi-Fi connections and provide a Flow of [WifiState] changes.
+ *
+ * **Permissions Required:**
+ * - `ACCESS_WIFI_STATE`: To access Wi-Fi state and information.
+ * - `ACCESS_NETWORK_STATE`: To access network state and connectivity.
+ * - `ACCESS_FINE_LOCATION` (Android 8.0+): For obtaining SSID and BSSID. Location services
+ *   must also be enabled on the device.
+ *
+ * **Note on Android S (API 31+):** Access to `WifiInfo` fields like SSID, BSSID, link speed, etc.,
+ * may be restricted or return placeholder values if the app does not have specific privileged
+ * permissions (`NETWORK_SETTINGS`, `NETWORK_SETUP_WIZARD`) or `ACCESS_FINE_LOCATION`.
+ * This class attempts to fetch the best available information.
+ */
+@SuppressLint("MissingPermission") // Caller is responsible for ensuring permissions.
 class WifiMonitor(private val context: Context) {
-    
+
     private val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-    
+
     private val _currentWifiInfo = MutableStateFlow(WifiConnectionInfo())
+    /**
+     * A [StateFlow] providing the most recent [WifiConnectionInfo].
+     * This is updated by the internal monitoring logic and can be observed directly,
+     * though [getWifiStateFlow] is recommended for event-driven updates.
+     */
     val currentWifiInfo: StateFlow<WifiConnectionInfo> = _currentWifiInfo
-    
-    private var networkCallback: ConnectivityManager.NetworkCallback? = null
-    private var wifiReceiver: BroadcastReceiver? = null
-    
+
     /**
-     * Interface for Wi-Fi connection change callbacks
+     * Queries system services to get current Wi-Fi details and updates `_currentWifiInfo`.
+     * Returns the updated [WifiConnectionInfo].
      */
-    interface WifiConnectionListener {
-        fun onWifiConnected(wifiInfo: WifiConnectionInfo)
-        fun onWifiDisconnected()
-        fun onWifiInfoChanged(wifiInfo: WifiConnectionInfo)
-        fun onWifiCapabilitiesChanged(capabilities: String)
-    }
-    
-    private val listeners = mutableListOf<WifiConnectionListener>()
-    
-    /**
-     * Add a listener for Wi-Fi connection changes
-     */
-    fun addListener(listener: WifiConnectionListener) {
-        if (!listeners.contains(listener)) {
-            listeners.add(listener)
-        }
-    }
-    
-    /**
-     * Remove a listener for Wi-Fi connection changes
-     */
-    fun removeListener(listener: WifiConnectionListener) {
-        listeners.remove(listener)
-    }
-    
-    /**
-     * Start monitoring Wi-Fi connections
-     */
-    fun startMonitoring() {
-        // Modern API approach (preferred for Android 10+)
+    @Suppress("DEPRECATION") // For WifiInfo and some ConnectivityManager.getNetworkInfo calls
+    private fun refreshAndGetCurrentWifiInfo(): WifiConnectionInfo {
+        val systemWifiInfo: WifiInfo?
+        var isActuallyConnected = false
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val request = NetworkRequest.Builder()
-                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                .build()
-                
-            networkCallback = object : ConnectivityManager.NetworkCallback() {
+            val activeNetwork = connectivityManager.activeNetwork
+            if (activeNetwork != null) {
+                val networkCapabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+                if (networkCapabilities != null && networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                    isActuallyConnected = true
+                    systemWifiInfo = wifiManager.connectionInfo // May have restrictions on S+
+                } else {
+                    systemWifiInfo = null // Not a Wi-Fi network
+                }
+            } else {
+                systemWifiInfo = null // No active network
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            val networkInfo = connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI)
+            if (networkInfo?.isConnected == true) {
+                isActuallyConnected = true
+                systemWifiInfo = wifiManager.connectionInfo
+            } else {
+                systemWifiInfo = null
+            }
+        }
+
+        if (isActuallyConnected && systemWifiInfo != null &&
+            systemWifiInfo.ssid != null && systemWifiInfo.ssid != WifiManager.UNKNOWN_SSID &&
+            systemWifiInfo.bssid != null && systemWifiInfo.bssid != "00:00:00:00:00:00" // Common invalid BSSID
+        ) {
+            var ssid = systemWifiInfo.ssid
+            if (ssid.startsWith("\"") && ssid.endsWith("\"")) {
+                ssid = ssid.substring(1, ssid.length - 1)
+            }
+            // Re-check UNKNOWN_SSID after stripping quotes
+            if (ssid == WifiManager.UNKNOWN_SSID) {
+                _currentWifiInfo.update { WifiConnectionInfo() } // Default disconnected
+                return _currentWifiInfo.value
+            }
+
+
+            val ipAddress = intToIpAddress(systemWifiInfo.ipAddress)
+            val frequency = systemWifiInfo.frequency
+
+            val rssi = systemWifiInfo.rssi
+            // WifiManager.calculateSignalLevel returns an int from 0 to numLevels-1.
+            // Using 100 levels to approximate percentage (0-99).
+            val signalStrength = if (rssi != Int.MIN_VALUE && rssi != -127) { // Check for invalid RSSI
+                WifiManager.calculateSignalLevel(rssi, 100)
+            } else {
+                0 // Default for invalid/unknown RSSI
+            }
+
+            val updatedInfo = WifiConnectionInfo(
+                ssid = ssid,
+                bssid = systemWifiInfo.bssid ?: "", // Should not be null due to earlier check
+                ipAddress = ipAddress,
+                linkSpeed = systemWifiInfo.linkSpeed,
+                frequency = frequency,
+                signalStrength = signalStrength,
+                networkId = systemWifiInfo.networkId,
+                capabilities = getWifiCapabilitiesString(systemWifiInfo, signalStrength),
+                isConnected = true
+            )
+            _currentWifiInfo.update { updatedInfo }
+        } else {
+            // Not connected or invalid/insufficient Wi-Fi info
+            _currentWifiInfo.update { WifiConnectionInfo() } // Default disconnected state
+        }
+        return _currentWifiInfo.value
+    }
+
+    /**
+     * Generates a formatted string summarizing Wi-Fi capabilities.
+     */
+    private fun getWifiCapabilitiesString(wifiInfo: WifiInfo, calculatedSignalStrength: Int): String {
+        val speed = wifiInfo.linkSpeed.takeIf { it != -1 }?.toString() ?: "N/A"
+        val freq = wifiInfo.frequency.takeIf { it > 0 }?.toString() ?: "N/A"
+        return "Speed: $speed Mbps, Frequency: $freq MHz, Signal: $calculatedSignalStrength%"
+    }
+
+    /**
+     * Converts an integer representation of an IP address to its string format.
+     */
+    private fun intToIpAddress(ipAddress: Int): String {
+        if (ipAddress == 0) return "" // Common for disconnected or unassigned IP
+        return "${ipAddress and 0xff}.${ipAddress shr 8 and 0xff}." +
+                "${ipAddress shr 16 and 0xff}.${ipAddress shr 24 and 0xff}"
+    }
+
+    /**
+     * Provides a [Flow] that emits [WifiState] updates.
+     *
+     * The flow initiates Wi-Fi monitoring when it is collected and stops monitoring when the
+     * collection is cancelled. Each new collector will start its own monitoring instance.
+     * To share a single monitoring stream across multiple observers, apply operators like
+     * `shareIn` or `stateIn` to the Flow returned by this function.
+     *
+     * Emitted states:
+     * - [WifiState.Init]: Sent immediately upon starting collection.
+     * - [WifiState.Connected]: When a Wi-Fi connection is established or detected.
+     * - [WifiState.Disconnected]: When the Wi-Fi connection is lost.
+     * - [WifiState.InfoChanged]: When properties of an active Wi-Fi connection change (e.g., signal strength).
+     */
+    fun getWifiStateFlow(): Flow<WifiState> = callbackFlow {
+        var previousWifiInfoState = _currentWifiInfo.value // Store initial state for comparison
+
+        val internalNetworkCallback = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            object : ConnectivityManager.NetworkCallback() {
                 override fun onAvailable(network: Network) {
-                    updateWifiInfo()
+                    super.onAvailable(network)
+                    val newInfo = refreshAndGetCurrentWifiInfo()
+                    // Ensure this 'available' network is indeed the one we are tracking (Wi-Fi)
+                    if (newInfo.isConnected) {
+                        trySend(WifiState.Connected(newInfo))
+                    }
+                    previousWifiInfoState = newInfo
                 }
-                
+
                 override fun onLost(network: Network) {
-                    _currentWifiInfo.update { it.copy(isConnected = false) }
-                    notifyDisconnected()
+                    super.onLost(network)
+                    val infoAfterLoss = refreshAndGetCurrentWifiInfo() // Re-evaluate current state
+                    // Only send Disconnected if it was previously connected via this monitor's perspective
+                    if (!infoAfterLoss.isConnected && previousWifiInfoState.isConnected) {
+                        trySend(WifiState.Disconnected)
+                    }
+                    previousWifiInfoState = infoAfterLoss
                 }
-                
+
                 override fun onCapabilitiesChanged(
                     network: Network,
                     networkCapabilities: NetworkCapabilities
                 ) {
-                    updateWifiInfo()
-                    _currentWifiInfo.value.let { 
-                        notifyCapabilitiesChanged(it.capabilities)
+                    super.onCapabilitiesChanged(network, networkCapabilities)
+                    // Ensure it's still a Wi-Fi network; otherwise, treat as lost.
+                    if (!networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                        val infoAfterCapsChange = refreshAndGetCurrentWifiInfo()
+                        if (!infoAfterCapsChange.isConnected && previousWifiInfoState.isConnected) {
+                            trySend(WifiState.Disconnected)
+                        }
+                        previousWifiInfoState = infoAfterCapsChange
+                        return
                     }
+
+                    val newInfo = refreshAndGetCurrentWifiInfo()
+                    previousWifiInfoState = newInfo
                 }
             }
-            
-            connectivityManager.registerNetworkCallback(request, networkCallback!!)
-            
-            // Initial update
-            updateWifiInfo()
-        } else {
-            // Legacy approach for older Android versions
-            val wifiIntentFilter = IntentFilter().apply {
+        } else null
+
+        val internalWifiReceiver = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            object : BroadcastReceiver() {
+                override fun onReceive(context: Context, intent: Intent) {
+                    val newInfo = refreshAndGetCurrentWifiInfo()
+                    if (newInfo.isConnected && !previousWifiInfoState.isConnected) {
+                        trySend(WifiState.Connected(newInfo))
+                    } else if (!newInfo.isConnected && previousWifiInfoState.isConnected) {
+                        trySend(WifiState.Disconnected)
+                    } else if (newInfo.isConnected && newInfo != previousWifiInfoState) {
+                        trySend(WifiState.InfoChanged(newInfo))
+                    }
+                    previousWifiInfoState = newInfo
+                }
+            }
+        } else null
+
+        // Register the appropriate callback/receiver
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && internalNetworkCallback != null) {
+            val request = NetworkRequest.Builder()
+                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                .build()
+            connectivityManager.registerNetworkCallback(request, internalNetworkCallback)
+        } else if (internalWifiReceiver != null) {
+            val intentFilter = IntentFilter().apply {
                 addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION)
-                addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)
+                addAction(WifiManager.WIFI_STATE_CHANGED_ACTION) // For Wi-Fi adapter state
                 addAction(WifiManager.RSSI_CHANGED_ACTION)
             }
-            
-            wifiReceiver = object : BroadcastReceiver() {
-                override fun onReceive(context: Context, intent: Intent) {
-                    when (intent.action) {
-                        WifiManager.NETWORK_STATE_CHANGED_ACTION, 
-                        WifiManager.WIFI_STATE_CHANGED_ACTION,
-                        WifiManager.RSSI_CHANGED_ACTION -> {
-                            updateWifiInfo()
-                        }
-                    }
-                }
-            }
-            
-            context.registerReceiver(wifiReceiver, wifiIntentFilter)
-            
-            // Initial update
-            updateWifiInfo()
-        }
-    }
-    
-    /**
-     * Stop monitoring Wi-Fi connections
-     */
-    fun stopMonitoring() {
-        networkCallback?.let {
-            connectivityManager.unregisterNetworkCallback(it)
-            networkCallback = null
-        }
-        
-        wifiReceiver?.let {
-            context.unregisterReceiver(it)
-            wifiReceiver = null
+            context.registerReceiver(internalWifiReceiver, intentFilter)
         }
 
+        // Emit initial state after registration
+        trySend(WifiState.Init)
+
+        // Cleanup: Unregister callbacks when the flow's collector is cancelled
+        awaitClose {
+            internalNetworkCallback?.let { connectivityManager.unregisterNetworkCallback(it) }
+            internalWifiReceiver?.let { context.unregisterReceiver(it) }
+        }
     }
-    
+
+    // --- Utility functions using the currentWifiInfo StateFlow ---
+
     /**
-     * Check if the current Wi-Fi connection matches the given SSID
+     * Checks if currently connected to a Wi-Fi network with the specified SSID.
+     * Comparison is case-insensitive.
      */
     fun isConnectedToSSID(ssid: String): Boolean {
-        return _currentWifiInfo.value.isConnected && _currentWifiInfo.value.ssid == ssid
+        val current = _currentWifiInfo.value
+        return current.isConnected && current.ssid.equals(ssid, ignoreCase = true)
     }
-    
+
     /**
-     * Check if the current Wi-Fi connection matches the given BSSID (MAC address)
+     * Checks if currently connected to a Wi-Fi network with the specified BSSID (MAC address).
+     * Comparison is case-insensitive.
      */
     fun isConnectedToBSSID(bssid: String): Boolean {
-        return _currentWifiInfo.value.isConnected && _currentWifiInfo.value.bssid == bssid
+        val current = _currentWifiInfo.value
+        return current.isConnected && current.bssid.equals(bssid, ignoreCase = true)
     }
-    
+
     /**
-     * Check if the current Wi-Fi connection matches the given network ID
+     * Checks if currently connected to a Wi-Fi network with the specified network ID.
      */
     fun isConnectedToNetworkId(networkId: Int): Boolean {
-        return _currentWifiInfo.value.isConnected && _currentWifiInfo.value.networkId == networkId
+        val current = _currentWifiInfo.value
+        return current.isConnected && current.networkId == networkId
     }
-    
+
     /**
-     * Check if the current Wi-Fi connection matches any of the specified criteria
+     * Checks if the device has an active and validated internet connection through any network.
+     */
+    fun hasInternetConnection(): Boolean {
+        val activeNetwork = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+    }
+
+    /**
+     * Checks if currently connected to a Wi-Fi network matching all specified criteria.
+     * If no criteria (all nulls) are provided, it checks if simply connected to any Wi-Fi.
+     * Comparisons for SSID and BSSID are case-insensitive.
      */
     fun isConnectedToNetwork(
         ssid: String? = null,
         bssid: String? = null,
         networkId: Int? = null
     ): Boolean {
-        if (!_currentWifiInfo.value.isConnected) return false
-        
-        return when {
-            ssid != null -> _currentWifiInfo.value.ssid == ssid
-            bssid != null -> _currentWifiInfo.value.bssid == bssid
-            networkId != null -> _currentWifiInfo.value.networkId == networkId
-            else -> false
+        val currentInfo = _currentWifiInfo.value
+        if (!currentInfo.isConnected) return false
+
+        // If no specific criteria, just being connected to Wi-Fi is enough
+        if (ssid == null && bssid == null && networkId == null) {
+            return true
         }
-    }
-    
-    /**
-     * Update the current Wi-Fi information
-     */
-    @Suppress("DEPRECATION")
-    private fun updateWifiInfo() {
-        val prevInfo = _currentWifiInfo.value
-        val newInfo: WifiConnectionInfo
-        
-        val wifiInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val network = connectivityManager.activeNetwork ?: return
-            val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return
-            
-            // Check if this is a Wi-Fi connection
-            if (!capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-                _currentWifiInfo.update { it.copy(isConnected = false) }
-                notifyDisconnected()
-                return
-            }
-            
-            connectivityManager.getNetworkInfo(network) ?: return
-            wifiManager.connectionInfo
-        } else {
-            wifiManager.connectionInfo
-        }
-        
-        if (wifiInfo != null) {
-            // Process SSID (remove quotes if present)
-            var ssid = wifiInfo.ssid
-            if (ssid.startsWith("\"") && ssid.endsWith("\"")) {
-                ssid = ssid.substring(1, ssid.length - 1)
-            }
-            
-            val ipAddress = intToIpAddress(wifiInfo.ipAddress)
-            
-            newInfo = WifiConnectionInfo(
-                ssid = ssid,
-                bssid = wifiInfo.bssid ?: "",
-                ipAddress = ipAddress,
-                linkSpeed = wifiInfo.linkSpeed,
-                frequency = wifiInfo.frequency,
-                signalStrength = WifiManager.calculateSignalLevel(wifiInfo.rssi, 100),
-                networkId = wifiInfo.networkId,
-                capabilities = getWifiCapabilities(wifiInfo),
-                isConnected = true
-            )
-            
-            _currentWifiInfo.update { newInfo }
-            
-            // Notify listeners
-            if (!prevInfo.isConnected) {
-                notifyConnected(newInfo)
-            } else if (prevInfo != newInfo) {
-                if (prevInfo.capabilities != newInfo.capabilities) {
-                    notifyCapabilitiesChanged(newInfo.capabilities)
-                }
-                notifyInfoChanged(newInfo)
-            }
-        } else {
-            _currentWifiInfo.update { it.copy(isConnected = false) }
-            if (prevInfo.isConnected) {
-                notifyDisconnected()
-            }
-        }
-    }
-    
-    /**
-     * Get Wi-Fi capabilities as a string
-     */
-    @Suppress("DEPRECATION")
-    private fun getWifiCapabilities(wifiInfo: WifiInfo): String {
-        val capabilities = StringBuilder()
-        capabilities.append("Speed: ${wifiInfo.linkSpeed} Mbps")
-        capabilities.append(", Frequency: ${wifiInfo.frequency} MHz")
-        capabilities.append(", Signal: ${WifiManager.calculateSignalLevel(wifiInfo.rssi, 100)}%")
-        return capabilities.toString()
-    }
-    
-    /**
-     * Convert integer IP address to string format
-     */
-    private fun intToIpAddress(ipAddress: Int): String {
-        return "${ipAddress and 0xff}.${ipAddress shr 8 and 0xff}." +
-                "${ipAddress shr 16 and 0xff}.${ipAddress shr 24 and 0xff}"
-    }
-    
-    /**
-     * Notify listeners that Wi-Fi has connected
-     */
-    private fun notifyConnected(wifiInfo: WifiConnectionInfo) {
-        listeners.forEach { it.onWifiConnected(wifiInfo) }
-    }
-    
-    /**
-     * Notify listeners that Wi-Fi has disconnected
-     */
-    private fun notifyDisconnected() {
-        listeners.forEach { it.onWifiDisconnected() }
-    }
-    
-    /**
-     * Notify listeners that Wi-Fi information has changed
-     */
-    private fun notifyInfoChanged(wifiInfo: WifiConnectionInfo) {
-        listeners.forEach { it.onWifiInfoChanged(wifiInfo) }
-    }
-    
-    /**
-     * Notify listeners that Wi-Fi capabilities have changed
-     */
-    private fun notifyCapabilitiesChanged(capabilities: String) {
-        listeners.forEach { it.onWifiCapabilitiesChanged(capabilities) }
-    }
-    
-    /**
-     * Get a Flow of Wi-Fi information updates
-     */
-    fun getWifiInfoFlow(): Flow<WifiConnectionInfo> = callbackFlow {
-        val listener = object : WifiConnectionListener {
-            override fun onWifiConnected(wifiInfo: WifiConnectionInfo) {
-                trySend(wifiInfo)
-            }
-            
-            override fun onWifiDisconnected() {
-                trySend(WifiConnectionInfo(isConnected = false))
-            }
-            
-            override fun onWifiInfoChanged(wifiInfo: WifiConnectionInfo) {
-//                trySend(wifiInfo)
-            }
-            
-            override fun onWifiCapabilitiesChanged(capabilities: String) {
-                // Only send if the capabilities are the only thing that changed
-            }
-        }
-        
-        addListener(listener)
-        
-        // Send initial state
-        trySend(_currentWifiInfo.value)
-        
-        // Clean up when flow collection stops
-        awaitClose {
-            removeListener(listener)
-        }
+
+        val ssidMatch = ssid?.equals(currentInfo.ssid, ignoreCase = true) ?: true // True if null (not specified)
+        val bssidMatch = bssid?.equals(currentInfo.bssid, ignoreCase = true) ?: true // True if null
+        val networkIdMatch = networkId?.equals(currentInfo.networkId) ?: true // True if null
+
+        return ssidMatch && bssidMatch && networkIdMatch
     }
 }

@@ -1,27 +1,34 @@
 package dev.achmad.alephup.ui.home
 
 import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.LocalActivity
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -29,13 +36,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import dev.achmad.alephup.device.BatteryOptimizationHelper
+import dev.achmad.alephup.R
 import dev.achmad.alephup.device.BootCompletedReceiver
 import dev.achmad.alephup.device.WifiMonitorService
+import dev.achmad.alephup.ui.components.CardSection
+import dev.achmad.alephup.ui.components.CardSectionItem
+import dev.achmad.alephup.ui.components.CardSectionButton
+import dev.achmad.alephup.ui.components.ToggleItem
 import dev.achmad.alephup.ui.util.PermissionState
 import dev.achmad.alephup.ui.util.rememberPermissionState
-import dev.achmad.core.TARGET_BSSID
-import dev.achmad.core.util.inject
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 object HomeScreen: Screen {
 
@@ -46,14 +57,19 @@ object HomeScreen: Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val context = LocalContext.current
         val activity = LocalActivity.currentOrThrow
+        val applicationContext = activity.applicationContext
         val lifecycleOwner = LocalLifecycleOwner.current
-        val batteryOptimizationHelper = remember { inject<BatteryOptimizationHelper>() }
+        val scrollState = rememberScrollState()
         val viewModel = viewModel<HomeViewModel>()
         val state by viewModel.state.collectAsState()
-        val serviceEnabled = viewModel.serviceEnabled.collectAsState().value
-
+        val serviceEnabledOnBoot = viewModel.serviceEnabledOnBoot.collectAsState().value
+        val lastAttendance = viewModel.lastAttendance.collectAsState().value
+        val lastAttendanceString = when {
+            lastAttendance == LocalDate.MIN -> "Never"
+            else -> lastAttendance.format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
+        }
+        var backgroundPermissionGranted by remember { mutableStateOf(false) }
         val notificationPermission = when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
                 rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS)
@@ -66,32 +82,31 @@ object HomeScreen: Screen {
                 )
             }
         }
+        val toggleServiceEnabled by remember {
+            derivedStateOf {
+                backgroundPermissionGranted && notificationPermission.isGranted.value
+            }
+        }
 
-        fun handleService() {
+        fun toggleBackgroundService() {
             if (!notificationPermission.isGranted.value) {
                 notificationPermission.requestPermission()
                 return
             }
             if (!WifiMonitorService.isRunning.value) {
-                WifiMonitorService.startService(
-                    context = context,
-                    targetBssid = state.wifiConnectionInfo?.bssid
-                )
+                WifiMonitorService.startService(applicationContext)
             } else {
-                WifiMonitorService.stopService(context)
+                WifiMonitorService.stopService(applicationContext)
             }
         }
 
-        fun handleBoot() {
+        fun toggleBoot() {
             if (!notificationPermission.isGranted.value) {
                 notificationPermission.requestPermission()
                 return
             }
-            if (!serviceEnabled) {
-                BootCompletedReceiver.saveServiceSettings(
-                    enabled = true,
-                    targetBssid = TARGET_BSSID
-                )
+            if (!serviceEnabledOnBoot) {
+                BootCompletedReceiver.saveServiceSettings(true)
             } else {
                 BootCompletedReceiver.clearServiceSettings()
             }
@@ -99,72 +114,116 @@ object HomeScreen: Screen {
 
         DisposableEffect(lifecycleOwner) {
             val observer = LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    viewModel.updateScreenState {
-                        it.copy(
-                            isIgnoringBatteryOptimization = batteryOptimizationHelper.isIgnoringBatteryOptimizations(),
-                        )
+                when(event) {
+                    Lifecycle.Event.ON_CREATE -> {
+                        ResetAndMaybePostAttendanceJob.scheduleNow(applicationContext)
                     }
+                    Lifecycle.Event.ON_RESUME -> {
+                        backgroundPermissionGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            ContextCompat.checkSelfPermission(
+                                applicationContext, Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                            ) == PackageManager.PERMISSION_GRANTED
+                        } else true
+                        viewModel.updateBatteryOptimization()
+                    }
+                    else -> Unit
                 }
             }
             lifecycleOwner.lifecycle.addObserver(observer)
             onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
         }
 
-        Scaffold(
-
-        ) { contentPadding ->
+        Scaffold { contentPadding ->
             Column(
                 modifier = Modifier
+                    .fillMaxWidth()
                     .padding(contentPadding)
-                    .fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
+                    .verticalScroll(scrollState)
+                    .padding(16.dp)
             ) {
+                Spacer(modifier = Modifier.height(32.dp))
+                val wifiName = state.wifiConnectionInfo?.ssid
                 Text(
-                    text = state.wifiConnectionInfo?.toString() ?: "Not connected"
+                    text = when {
+                        wifiName != null -> stringResource(R.string.connected_to, wifiName)
+                        else -> stringResource(R.string.not_connected)
+                    }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Excluded from battery optimization: ${state.isIgnoringBatteryOptimization}"
+                    text = "Last attendance: $lastAttendanceString"
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Service running: ${WifiMonitorService.isRunning.value}"
+                    text = stringResource(R.string.enable_optional_settings)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Service on boot enabled: $serviceEnabled"
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = {
-                        if (!batteryOptimizationHelper.isIgnoringBatteryOptimizations()) {
-                            val intent = batteryOptimizationHelper.requestBatteryOptimizationExclusion()
-                            activity.startActivityForResult(intent, REQUEST_BATTERY_OPTIMIZATION)
+                CardSection(title = stringResource(R.string.background_service)) {
+                    CardSectionItem(
+                        text = stringResource(R.string.allow_location_permission_all_the_time),
+                        description = stringResource(R.string.required_for_wifi_monitoring),
+                        isGranted = backgroundPermissionGranted,
+                        onRequestPermission = {
+                            if (!backgroundPermissionGranted) {
+                                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = Uri.fromParts("package", applicationContext.packageName, null)
+                                }
+                                activity.startActivity(intent)
+                            }
                         }
-                    }
-                ) {
-                    Text("Optimize Battery")
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    CardSectionItem(
+                        text = stringResource(R.string.allow_notifications),
+                        description = stringResource(R.string.required_for_background_notification),
+                        isGranted = notificationPermission.isGranted.value,
+                        onRequestPermission = {
+                            notificationPermission.requestPermission.invoke()
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    ToggleItem(
+                        text = stringResource(R.string.start_service_on_boot),
+                        description = stringResource(R.string.start_service_on_boot_description),
+                        isChecked = serviceEnabledOnBoot,
+                        onCheckedChange = { toggleBoot() }
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    CardSectionButton(
+                        text = if (!WifiMonitorService.isRunning.value)
+                            stringResource(R.string.enable_background_service)
+                        else
+                            stringResource(R.string.disable_background_service),
+                        onClick = { toggleBackgroundService() },
+                        enabled = toggleServiceEnabled,
+                        backgroundColor = if (WifiMonitorService.isRunning.value) Color.Red else null,
+                        contentColor = if (WifiMonitorService.isRunning.value) Color.White else null
+                    )
                 }
-                Button(
-                    onClick = {
-                        val intent = batteryOptimizationHelper.openBatteryOptimizationSettings()
-                        activity.startActivity(intent)
-                    }
-                ) {
-                    Text("Open settings")
+                Spacer(modifier = Modifier.height(16.dp))
+                CardSection(title = stringResource(R.string.battery_optimization)) {
+                    CardSectionItem(
+                        text = stringResource(R.string.excluded_from_battery_optimization),
+                        description = stringResource(R.string.excluded_from_battery_optimization_description),
+                        isGranted = state.isIgnoringBatteryOptimization,
+                        onRequestPermission = {
+                            if (!state.isIgnoringBatteryOptimization) {
+                                activity.startActivityForResult(
+                                    viewModel.requestBatteryOptimizationExclusionIntent(),
+                                    REQUEST_BATTERY_OPTIMIZATION
+                                )
+                            }
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    CardSectionButton(
+                        text = stringResource(R.string.open_battery_optimization_settings),
+                        onClick = {
+                            activity.startActivity(viewModel.openBatteryOptimizationSettingsIntent())
+                        }
+                    )
                 }
-                Button(
-                    onClick = { handleService() }
-                ) {
-                    Text(if (!WifiMonitorService.isRunning.value) "Start service" else "Stop service")
-                }
-                Button(
-                    onClick = { handleBoot() }
-                ) {
-                    Text(if (!serviceEnabled) "Start service on boot" else "Stop service on boot")
-                }
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }

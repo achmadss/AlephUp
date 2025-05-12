@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
     private val hasRequiredPermissions: Boolean
         get() {
             return arePermissionsAllowed(
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && bootCompletedPreference.serviceEnabled().get()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && bootCompletedPreference.serviceEnabledOnBoot().get()) {
                     listOf(
                         Manifest.permission.ACCESS_BACKGROUND_LOCATION,
                         Manifest.permission.ACCESS_FINE_LOCATION,

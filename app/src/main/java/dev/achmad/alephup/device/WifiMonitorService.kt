@@ -12,20 +12,19 @@ import android.os.PowerManager
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.app.NotificationCompat
 import dev.achmad.alephup.base.MainActivity
-import dev.achmad.core.network.GET
-import dev.achmad.core.network.NetworkHelper
-import dev.achmad.core.network.await
+import dev.achmad.alephup.ui.home.ResetAndMaybePostAttendanceJob
+import dev.achmad.core.util.inject
+import dev.achmad.data.attendance.PostAttendance
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import org.koin.android.ext.android.inject
 
 /**
  * Foreground service that monitors Wi-Fi connections and executes tasks when connected to specific networks
  */
-class WifiMonitorService : Service(), WifiMonitor.WifiConnectionListener {
+class WifiMonitorService : Service() {
 
     companion object {
         private const val NOTIFICATION_CHANNEL_ID = "wifi_monitor_channel"
@@ -35,21 +34,16 @@ class WifiMonitorService : Service(), WifiMonitor.WifiConnectionListener {
         // Intent actions
         const val ACTION_START_SERVICE = "dev.achmad.alephup.ACTION_START_SERVICE"
         const val ACTION_STOP_SERVICE = "dev.achmad.alephup.ACTION_STOP_SERVICE"
-        
-        // Intent extras
-        const val EXTRA_TARGET_BSSID = "target_bssid"
 
         var isRunning = mutableStateOf(false)
         
         /**
          * Start the Wi-Fi monitor service
          */
-        fun startService(context: Context, targetBssid: String? = null) {
+        fun startService(context: Context) {
             val intent = Intent(context, WifiMonitorService::class.java).apply {
                 action = ACTION_START_SERVICE
-                putExtra(EXTRA_TARGET_BSSID, targetBssid)
             }
-
             context.startForegroundService(intent)
         }
         
@@ -64,19 +58,13 @@ class WifiMonitorService : Service(), WifiMonitor.WifiConnectionListener {
         }
     }
     
-    private val wifiMonitor: WifiMonitor by inject()
-    private val networkHelper: NetworkHelper = dev.achmad.core.util.inject()
-
-    private var targetBssid: String? = null
-    
+    private val wifiMonitor = inject<WifiMonitor>()
     private var wakeLock: PowerManager.WakeLock? = null
-    
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        wifiMonitor.addListener(this)
         
         // Create and acquire wake lock
         val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
@@ -84,21 +72,14 @@ class WifiMonitorService : Service(), WifiMonitor.WifiConnectionListener {
             PowerManager.PARTIAL_WAKE_LOCK,
             WAKE_LOCK_TAG
         ).apply {
-            acquire()
+            acquire(10*60*1000L) // timeout in 10 minutes
         }
-        
-        // Start monitoring Wi-Fi connections
-        wifiMonitor.startMonitoring()
 
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START_SERVICE -> {
-                // Get target Wi-Fi information
-                targetBssid = intent.getStringExtra(EXTRA_TARGET_BSSID)
-
-                // Start as a foreground service
                 startForeground(NOTIFICATION_ID, createNotification())
                 isRunning.value = true
             }
@@ -106,11 +87,23 @@ class WifiMonitorService : Service(), WifiMonitor.WifiConnectionListener {
                 stopSelf()
             }
         }
-        
-        // Check current connection
-        val currentWifi = wifiMonitor.currentWifiInfo.value
-        if (currentWifi.isConnected) {
-            checkAndExecuteTasksForWifi(currentWifi)
+
+        serviceScope.launch {
+            wifiMonitor.getWifiStateFlow().collect { wifiState ->
+                when(wifiState) {
+                    is WifiState.Connected -> {
+                        val wifiInfo = wifiState.wifiInfo
+                        updateNotification("Connected to: ${wifiInfo.ssid}")
+                        serviceScope.launch {
+                            PostAttendance.await(wifiInfo.bssid)
+                        }
+                    }
+                    is WifiState.Disconnected -> {
+                        updateNotification("Not connected to Wi-Fi")
+                    }
+                    else -> Unit
+                }
+            }
         }
         
         // If service is killed, restart it
@@ -130,10 +123,6 @@ class WifiMonitorService : Service(), WifiMonitor.WifiConnectionListener {
         }
         wakeLock = null
         
-        // Clean up Wi-Fi monitor
-        wifiMonitor.removeListener(this)
-        wifiMonitor.stopMonitoring()
-        
         // Cancel coroutines
         serviceScope.cancel()
 
@@ -142,62 +131,12 @@ class WifiMonitorService : Service(), WifiMonitor.WifiConnectionListener {
         super.onDestroy()
     }
     
-    override fun onWifiConnected(wifiInfo: WifiConnectionInfo) {
-        checkAndExecuteTasksForWifi(wifiInfo)
-        updateNotification("Connected to: ${wifiInfo.ssid}")
-    }
-    
-    override fun onWifiDisconnected() {
-        updateNotification("Not connected to Wi-Fi")
-    }
-    
-    override fun onWifiInfoChanged(wifiInfo: WifiConnectionInfo) {
-        // Only perform actions if the network matches our target
-//        checkAndExecuteTasksForWifi(wifiInfo)
-    }
-    
-    override fun onWifiCapabilitiesChanged(capabilities: String) {
-        // Not needed for this implementation
-    }
-    
-    /**
-     * Check if the Wi-Fi connection matches our target and execute tasks if it does
-     */
-    private fun checkAndExecuteTasksForWifi(wifiInfo: WifiConnectionInfo) {
-        val isTargetNetwork = when {
-            targetBssid != null && wifiInfo.bssid == targetBssid -> true
-            else -> false
-        }
-        
-        if (isTargetNetwork) {
-            // Execute your tasks here
-            executeBackgroundTasks(wifiInfo)
-        }
-    }
-    
-    /**
-     * Execute your background tasks when connected to the target Wi-Fi
-     */
-    private fun executeBackgroundTasks(wifiInfo: WifiConnectionInfo) {
-        serviceScope.launch {
-            // TODO: Implement your specific background tasks here
-            // For example:
-            // - Sync data with a server
-            // - Perform local processing
-            // - Check for updates
-            // - etc.
-            networkHelper.client.newCall(
-                GET("https://achmad.dev")
-            ).await()
-        }
-    }
-    
     /**
      * Create notification channel for foreground service (required for Android O+)
      */
     private fun createNotificationChannel() {
-        val name = "Wi-Fi Monitor"
-        val descriptionText = "Monitors Wi-Fi connections to perform background tasks"
+        val name = "Background Attendance Service"
+        val descriptionText = "Verify Wi-Fi connection in the background to attend automatically"
         val importance = NotificationManager.IMPORTANCE_LOW
         val channel = NotificationChannel(NOTIFICATION_CHANNEL_ID, name, importance).apply {
             description = descriptionText
@@ -222,11 +161,11 @@ class WifiMonitorService : Service(), WifiMonitor.WifiConnectionListener {
         val status = if (wifiMonitor.currentWifiInfo.value.isConnected) {
             "Connected to: ${wifiMonitor.currentWifiInfo.value.ssid}"
         } else {
-            "Monitoring Wi-Fi connections"
+            "Not Connected"
         }
         
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setContentTitle("AlephUp Wi-Fi Monitor")
+            .setContentTitle("AlephUp")
             .setContentText(status)
             .setSmallIcon(android.R.drawable.ic_dialog_info) // Replace with your app icon
             .setContentIntent(pendingIntent)
@@ -239,7 +178,7 @@ class WifiMonitorService : Service(), WifiMonitor.WifiConnectionListener {
      */
     private fun updateNotification(status: String) {
         val notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-            .setContentTitle("AlephUp Wi-Fi Monitor")
+            .setContentTitle("AlephUp")
             .setContentText(status)
             .setSmallIcon(android.R.drawable.ic_dialog_info) // Replace with your app icon
             .setContentIntent(

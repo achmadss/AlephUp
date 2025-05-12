@@ -1,16 +1,17 @@
 package dev.achmad.alephup.ui.home
 
+import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.achmad.alephup.device.BatteryOptimizationHelper
 import dev.achmad.alephup.device.BootCompletedPreference
 import dev.achmad.alephup.device.WifiConnectionInfo
 import dev.achmad.alephup.device.WifiMonitor
 import dev.achmad.alephup.device.WifiMonitorService
-import dev.achmad.core.TARGET_BSSID
-import dev.achmad.core.network.GET
-import dev.achmad.core.network.NetworkHelper
-import dev.achmad.core.network.await
+import dev.achmad.alephup.device.WifiState
 import dev.achmad.core.util.inject
+import dev.achmad.data.attendance.AttendancePreference
+import dev.achmad.data.attendance.PostAttendance
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -25,56 +26,61 @@ data class HomeScreenState(
 class HomeViewModel(
     private val wifiMonitor: WifiMonitor = inject(),
     private val bootCompletedPreference: BootCompletedPreference = inject(),
-    private val networkHelper: NetworkHelper = inject()
+    private val attendancePreference: AttendancePreference = inject(),
+    private val batteryOptimizationHelper: BatteryOptimizationHelper = inject(),
 ): ViewModel() {
-
-    private val tag: String = this::class.java.simpleName
 
     private val mutableState = MutableStateFlow(HomeScreenState())
     val state = mutableState.asStateFlow()
 
-    val serviceEnabled = bootCompletedPreference.serviceEnabled().stateIn(viewModelScope)
+    val serviceEnabledOnBoot = bootCompletedPreference.serviceEnabledOnBoot().stateIn(viewModelScope)
+    val lastAttendance = attendancePreference.lastAttendance().stateIn(viewModelScope)
 
     init {
-        if (!WifiMonitorService.isRunning.value) {
-            wifiMonitor.startMonitoring()
-        }
         observeWifiChanges()
     }
 
     private fun observeWifiChanges() = viewModelScope.launch {
-        wifiMonitor.getWifiInfoFlow().collect { wifiInfo ->
-            mutableState.update { it.copy(wifiConnectionInfo = wifiInfo) }
-            if (!WifiMonitorService.isRunning.value) {
-                checkAndExecuteTasksForWifi(wifiInfo)
+        wifiMonitor.getWifiStateFlow().collect { wifiState ->
+            when(wifiState) {
+                is WifiState.Init,
+                is WifiState.Disconnected -> mutableState.update { HomeScreenState() }
+                is WifiState.Connected -> {
+                    val wifiInfo = wifiState.wifiInfo
+                    mutableState.update {
+                        it.copy(
+                            wifiConnectionInfo = wifiInfo
+                        )
+                    }
+                    if (!WifiMonitorService.isRunning.value) {
+                        PostAttendance.await(wifiInfo.bssid)
+                    }
+                }
+                is WifiState.InfoChanged -> {
+                    mutableState.update {
+                        it.copy(
+                            wifiConnectionInfo = wifiState.wifiInfo
+                        )
+                    }
+                }
             }
         }
     }
-    private fun checkAndExecuteTasksForWifi(wifiInfo: WifiConnectionInfo) {
-        val isTargetNetwork = when {
-            wifiInfo.bssid == TARGET_BSSID -> true
-            else -> false
-        }
 
-        if (isTargetNetwork) {
-            attend()
+    fun updateBatteryOptimization() {
+        mutableState.update {
+            it.copy(
+                isIgnoringBatteryOptimization = batteryOptimizationHelper.isIgnoringBatteryOptimizations(),
+            )
         }
     }
 
-    private fun attend() = viewModelScope.launch {
-        networkHelper.client.newCall(
-            GET("https://achmad.dev")
-        ).await()
+    fun requestBatteryOptimizationExclusionIntent(): Intent {
+        return batteryOptimizationHelper.requestBatteryOptimizationExclusion()
     }
 
-
-    fun updateScreenState(
-        transform: (HomeScreenState) -> HomeScreenState
-    ) = mutableState.update(transform)
-
-    override fun onCleared() {
-        super.onCleared()
-        wifiMonitor.stopMonitoring()
+    fun openBatteryOptimizationSettingsIntent(): Intent {
+        return batteryOptimizationHelper.openBatteryOptimizationSettings()
     }
 
 }

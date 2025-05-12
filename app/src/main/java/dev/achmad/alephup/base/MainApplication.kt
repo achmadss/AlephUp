@@ -4,6 +4,7 @@ import android.app.Application
 import android.util.Log
 import dev.achmad.alephup.di.appModule
 import dev.achmad.core.di.coreModule
+import dev.achmad.data.di.dataModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 import org.koin.core.logger.Level
@@ -33,6 +34,7 @@ class MainApplication: Application() {
                 listOf(
                     appModule,
                     coreModule,
+                    dataModule,
                 )
             )
         }

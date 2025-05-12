@@ -11,8 +11,7 @@ import dev.achmad.core.util.inject
 class BootCompletedReceiver : BroadcastReceiver() {
 
     companion object {
-        const val KEY_SERVICE_ENABLED = "service_enabled"
-        const val KEY_TARGET_BSSID = "target_bssid"
+        const val KEY_SERVICE_ENABLED_ON_BOOT = "service_enabled_on_boot"
 
         private val preference = inject<BootCompletedPreference>()
         
@@ -20,13 +19,10 @@ class BootCompletedReceiver : BroadcastReceiver() {
          * Save service settings to start on boot
          */
         fun saveServiceSettings(
-            enabled: Boolean,
-            targetBssid: String? = null
+            enabled: Boolean
         ) {
-            if (targetBssid == null) return
             with(preference) {
-                serviceEnabled().set(enabled)
-                targetBSSID().set(targetBssid)
+                serviceEnabledOnBoot().set(enabled)
             }
         }
         
@@ -35,40 +31,19 @@ class BootCompletedReceiver : BroadcastReceiver() {
          */
         fun clearServiceSettings() {
             with(preference) {
-                serviceEnabled().set(false)
-                targetBSSID().set("")
+                serviceEnabledOnBoot().set(false)
             }
         }
-        
-        /**
-         * Get service settings
-         */
-        fun getServiceSettings(): ServiceSettings {
-            return ServiceSettings(
-                enabled = preference.serviceEnabled().get(),
-                targetBssid = preference.targetBSSID().get()
-            )
-        }
+
     }
-    
-    data class ServiceSettings(
-        val enabled: Boolean,
-        val targetBssid: String?
-    )
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
-            val settings = getServiceSettings()
             
-            if (settings.enabled && !settings.targetBssid.isNullOrBlank()) {
+            if (preference.serviceEnabledOnBoot().get()) {
                 // Wait a bit to ensure system is fully booted
                 Thread.sleep(5000)
-                
-                // Start the service
-                WifiMonitorService.startService(
-                    context,
-                    settings.targetBssid
-                )
+                WifiMonitorService.startService(context)
             }
         }
     }
