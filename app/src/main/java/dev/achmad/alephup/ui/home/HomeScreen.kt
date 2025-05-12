@@ -56,7 +56,6 @@ object HomeScreen: Screen {
 
     @Composable
     override fun Content() {
-        val navigator = LocalNavigator.currentOrThrow
         val activity = LocalActivity.currentOrThrow
         val applicationContext = activity.applicationContext
         val lifecycleOwner = LocalLifecycleOwner.current

@@ -19,7 +19,7 @@ import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
 class ResetAndMaybePostAttendanceJob(
-    private val context: Context,
+    context: Context,
     workerParams: WorkerParameters
 ): CoroutineWorker(context, workerParams) {
 

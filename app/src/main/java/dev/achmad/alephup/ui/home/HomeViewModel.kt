@@ -25,9 +25,9 @@ data class HomeScreenState(
 
 class HomeViewModel(
     private val wifiMonitor: WifiMonitor = inject(),
-    private val bootCompletedPreference: BootCompletedPreference = inject(),
-    private val attendancePreference: AttendancePreference = inject(),
     private val batteryOptimizationHelper: BatteryOptimizationHelper = inject(),
+    bootCompletedPreference: BootCompletedPreference = inject(),
+    attendancePreference: AttendancePreference = inject(),
 ): ViewModel() {
 
     private val mutableState = MutableStateFlow(HomeScreenState())

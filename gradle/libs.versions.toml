@@ -19,7 +19,6 @@ coilCompose = "3.0.0-rc01"
 okhttp_version = "5.0.0-alpha.14"
 serialization_version = "1.8.0"
 voyager = "1.1.0-beta03"
-chucker = "4.1.0"
 workRuntimeKtx = "2.10.1"
 
 [libraries]

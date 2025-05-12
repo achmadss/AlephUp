@@ -12,7 +12,6 @@ import android.os.PowerManager
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.app.NotificationCompat
 import dev.achmad.alephup.base.MainActivity
-import dev.achmad.alephup.ui.home.ResetAndMaybePostAttendanceJob
 import dev.achmad.core.util.inject
 import dev.achmad.data.attendance.PostAttendance
 import kotlinx.coroutines.CoroutineScope

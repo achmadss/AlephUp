@@ -136,11 +136,6 @@ fun CardSectionItem(
 
             }
         )
-        if (isGranted) {
-
-        } else {
-
-        }
     }
 }
 
