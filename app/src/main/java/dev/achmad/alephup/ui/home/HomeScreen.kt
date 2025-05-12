@@ -93,9 +93,9 @@ object HomeScreen: Screen {
             }
             if (!WifiMonitorService.isRunning.value) {
                 WifiMonitorService.startService(applicationContext)
-            } else {
-                WifiMonitorService.stopService(applicationContext)
+                return
             }
+            WifiMonitorService.stopService(applicationContext)
         }
 
         fun toggleBoot() {

@@ -74,13 +74,14 @@ class WifiMonitorService : Service() {
             acquire(10*60*1000L) // timeout in 10 minutes
         }
 
+        isRunning.value = true
+
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START_SERVICE -> {
                 startForeground(NOTIFICATION_ID, createNotification())
-                isRunning.value = true
             }
             ACTION_STOP_SERVICE -> {
                 stopSelf()
@@ -125,9 +126,9 @@ class WifiMonitorService : Service() {
         // Cancel coroutines
         serviceScope.cancel()
 
-        isRunning.value = false
-        
         super.onDestroy()
+
+        isRunning.value = false
     }
     
     /**
