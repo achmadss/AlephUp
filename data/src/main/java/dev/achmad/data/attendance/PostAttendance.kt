@@ -8,10 +8,11 @@ import dev.achmad.core.network.await
 import dev.achmad.core.util.injectLazy
 import java.time.LocalDate
 
-object PostAttendance {
+class PostAttendance(
+    private val networkHelper: NetworkHelper
+) {
     suspend fun await(bssid: String) {
         if (bssid !in BSSID_TARGETS) return
-        val networkHelper by injectLazy<NetworkHelper>()
         val attendancePreference by injectLazy<AttendancePreference>()
         val lastAttendancePreference = attendancePreference.lastAttendance()
         val attendedPreference = attendancePreference.attended()

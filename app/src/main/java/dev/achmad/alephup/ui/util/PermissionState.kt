@@ -15,14 +15,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 
 class PermissionState internal constructor(
-    val permission: String,
     val isGranted: State<Boolean>,
     val requestPermission: () -> Unit
 )
 
 class MultiplePermissionsState internal constructor(
     val permissions: Map<String, Boolean>,
-    val allGranted: State<Boolean>,
+    val requiredPermissionsGranted: State<Boolean>,
     val requestPermissions: () -> Unit
 )
 
@@ -47,7 +46,6 @@ fun rememberPermissionState(
 
     return remember(permission) {
         PermissionState(
-            permission = permission,
             isGranted = permissionGranted,
             requestPermission = {
                 if (activity != null && !permissionGranted.value) {
@@ -60,7 +58,8 @@ fun rememberPermissionState(
 
 @Composable
 fun rememberMultiplePermissionsState(
-    permissions: List<String>
+    permissions: List<String>,
+    requiredPermissions: List<String> = permissions
 ): MultiplePermissionsState {
     val context = LocalContext.current
     val permissionResults = remember {
@@ -72,9 +71,11 @@ fun rememberMultiplePermissionsState(
         }
     }
 
-    val allGranted = remember {
+    val requiredPermissionsGranted = remember {
         derivedStateOf {
-            permissionResults.values.all { it }
+            permissionResults
+                .filter { it.key in requiredPermissions }.values
+                .all { it }
         }
     }
 
@@ -89,7 +90,7 @@ fun rememberMultiplePermissionsState(
     return remember(permissions) {
         MultiplePermissionsState(
             permissions = permissionResults,
-            allGranted = allGranted,
+            requiredPermissionsGranted = requiredPermissionsGranted,
             requestPermissions = {
                 launcher.launch(permissions.toTypedArray())
             }

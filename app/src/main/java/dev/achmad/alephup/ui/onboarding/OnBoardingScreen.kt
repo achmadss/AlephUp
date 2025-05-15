@@ -103,7 +103,7 @@ object OnBoardingScreen: Screen {
                     CardSectionItem(
                         text = stringResource(R.string.onboarding_permission_location),
                         description = stringResource(R.string.onboarding_permission_location_description),
-                        isGranted = requiredPermissions.allGranted.value,
+                        isGranted = requiredPermissions.requiredPermissionsGranted.value,
                         onRequestPermission = {
                             requiredPermissions.requestPermissions.invoke()
                         }
@@ -112,7 +112,7 @@ object OnBoardingScreen: Screen {
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     modifier = Modifier.align(Alignment.End),
-                    enabled = requiredPermissions.allGranted.value,
+                    enabled = requiredPermissions.requiredPermissionsGranted.value,
                     onClick = {
                         navigator.replace(HomeScreen)
                     },

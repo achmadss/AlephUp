@@ -74,7 +74,6 @@ object HomeScreen: Screen {
             }
             else -> {
                 PermissionState(
-                    permission = "android.permission.POST_NOTIFICATIONS",
                     isGranted = remember { mutableStateOf(true) },
                     requestPermission = {}
                 )

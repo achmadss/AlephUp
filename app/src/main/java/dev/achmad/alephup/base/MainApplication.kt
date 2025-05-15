@@ -2,8 +2,11 @@ package dev.achmad.alephup.base
 
 import android.app.Application
 import android.util.Log
+import dev.achmad.alephup.device.WifiMonitorService
 import dev.achmad.alephup.di.appModule
+import dev.achmad.alephup.util.NotificationHelper
 import dev.achmad.core.di.coreModule
+import dev.achmad.core.util.injectLazy
 import dev.achmad.data.di.dataModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
@@ -12,6 +15,8 @@ import org.koin.core.logger.Logger
 import org.koin.core.logger.MESSAGE
 
 class MainApplication: Application() {
+
+    private val notificationHelper by injectLazy<NotificationHelper>()
 
     override fun onCreate() {
         super.onCreate()
@@ -38,5 +43,12 @@ class MainApplication: Application() {
                 )
             )
         }
+        // notification channels
+        notificationHelper.createNotificationChannels(
+            listOf(
+                WifiMonitorService.createNotificationChannelConfig()
+                // add more if needed
+            )
+        )
     }
 }
