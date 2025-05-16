@@ -34,7 +34,7 @@ class NotificationHelper(
     /**
      * Data class to hold configuration for a notification channel.
      */
-    data class NotificationChannelConfig(
+    data class Channel(
         val id: String,
         val name: CharSequence,
         val description: String?,
@@ -47,14 +47,14 @@ class NotificationHelper(
      * Creates a notification channel if running on Android Oreo (API 26) or higher.
      * This should ideally be called from your Application's `onCreate()` method.
      *
-     * @param notificationChannelConfig [NotificationChannelConfig] Configuration for the channel.
+     * @param notificationChannelConfig [Channel] Configuration for the channel.
      */
     fun createNotificationChannels(
-        notificationChannelConfigs: List<NotificationChannelConfig>
+        channels: List<Channel>
     ) {
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannels(
-            notificationChannelConfigs.map { config ->
+            channels.map { config ->
                 NotificationChannel(
                     config.id,
                     config.name,

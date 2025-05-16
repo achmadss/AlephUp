@@ -10,7 +10,6 @@ import android.os.PowerManager
 import androidx.compose.runtime.mutableStateOf
 import dev.achmad.alephup.base.MainActivity
 import dev.achmad.alephup.util.NotificationHelper
-import dev.achmad.core.util.inject
 import dev.achmad.core.util.injectLazy
 import dev.achmad.data.attendance.PostAttendance
 import kotlinx.coroutines.CoroutineScope
@@ -149,7 +148,7 @@ class WifiMonitorService: Service() {
             context.startService(intent)
         }
 
-        fun createNotificationChannelConfig() = NotificationHelper.NotificationChannelConfig(
+        fun createNotificationChannelConfig() = NotificationHelper.Channel(
             id = NOTIFICATION_CHANNEL_ID,
             name = "Background Attendance Service",
             description = "Verify Wi-Fi connection in the background to attend automatically",
