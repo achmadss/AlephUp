@@ -12,7 +12,6 @@ import dev.achmad.alephup.ui.util.isRunning
 import dev.achmad.core.util.injectLazy
 import dev.achmad.data.attendance.AttendancePreference
 import dev.achmad.alephup.ui.util.workManager
-import dev.achmad.core.util.inject
 import dev.achmad.data.attendance.PostAttendance
 import java.time.Duration
 import java.time.LocalDateTime
@@ -24,14 +23,15 @@ class ResetAndMaybePostAttendanceJob(
 ): CoroutineWorker(context, workerParams) {
 
     private val attendancePreference by injectLazy<AttendancePreference>()
-    private val wifiMonitor = inject<WifiMonitor>()
+    private val postAttendance by injectLazy<PostAttendance>()
+    private val wifiMonitor by injectLazy<WifiMonitor>()
 
     override suspend fun doWork(): Result {
         val attendedPreference = attendancePreference.attended()
         attendedPreference.set(false)
         val wifiInfo = wifiMonitor.currentWifiInfo.value
         if (wifiInfo.isConnected) {
-            PostAttendance.await(wifiInfo.bssid)
+            postAttendance.await(wifiInfo.bssid)
         }
         return Result.success()
     }
@@ -42,23 +42,16 @@ class ResetAndMaybePostAttendanceJob(
 
         fun scheduleNow(context: Context) {
             val workManager = context.workManager
-            if (workManager.isRunning(RESET_ATTENDANCE_JOB) || workManager.isEnqueued(RESET_ATTENDANCE_JOB)) {
-                return
-            }
-
             workManager.cancelAllWorkByTag(RESET_ATTENDANCE_JOB)
 
             val now = LocalDateTime.now()
-
             val targetTime = now.toLocalDate()
                 .plusDays(1)
                 .atTime(0, 0, 0, 0)
-
             val firstRun = when {
                 now.isBefore(targetTime) -> targetTime
                 else -> targetTime.plusDays(1)
             }
-
             val delayMinutes = Duration.between(now, firstRun).toMinutes()
 
             val workRequest = PeriodicWorkRequestBuilder<ResetAndMaybePostAttendanceJob>(
