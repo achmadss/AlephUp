@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import dev.achmad.alephup.base.MainActivity
 import dev.achmad.alephup.util.NotificationHelper
 import dev.achmad.core.util.inject
+import dev.achmad.core.util.injectLazy
 import dev.achmad.data.attendance.PostAttendance
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,9 +24,9 @@ import kotlinx.coroutines.launch
  */
 class WifiMonitorService: Service() {
 
-    private val wifiMonitor = inject<WifiMonitor>()
-    private val notificationHelper = inject<NotificationHelper>()
-    private val postAttendance = inject<PostAttendance>()
+    private val wifiMonitor by injectLazy<WifiMonitor>()
+    private val notificationHelper by injectLazy<NotificationHelper>()
+    private val postAttendance by injectLazy<PostAttendance>()
 
     private var wakeLock: PowerManager.WakeLock? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

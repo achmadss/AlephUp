@@ -26,6 +26,7 @@ data class HomeScreenState(
 class HomeViewModel(
     private val wifiMonitor: WifiMonitor = inject(),
     private val batteryOptimizationHelper: BatteryOptimizationHelper = inject(),
+    private val postAttendance: PostAttendance = inject(),
     bootCompletedPreference: BootCompletedPreference = inject(),
     attendancePreference: AttendancePreference = inject(),
 ): ViewModel() {
@@ -53,7 +54,7 @@ class HomeViewModel(
                         )
                     }
                     if (!WifiMonitorService.isRunning.value) {
-                        PostAttendance.await(wifiInfo.bssid)
+                        postAttendance.await(wifiInfo.bssid)
                     }
                 }
                 is WifiState.InfoChanged -> {
