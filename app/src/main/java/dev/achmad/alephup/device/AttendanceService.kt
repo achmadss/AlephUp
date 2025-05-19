@@ -1,6 +1,5 @@
 package dev.achmad.alephup.device
 
-import android.R
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
@@ -36,7 +35,7 @@ class AttendanceService: Service() {
             channelId = NOTIFICATION_CHANNEL_ID,
             title = "AlephUp",
             text = getStatus(),
-            smallIconResId = R.drawable.ic_dialog_info,
+            smallIconResId = android.R.drawable.ic_dialog_info,
             context = this,
             pendingIntent = notificationHelper.createActivityPendingIntent(
                 requestCode = 0,
