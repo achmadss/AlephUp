@@ -6,9 +6,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequest
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkerParameters
-import dev.achmad.alephup.device.WifiMonitor
-import dev.achmad.alephup.ui.util.isEnqueued
-import dev.achmad.alephup.ui.util.isRunning
+import dev.achmad.alephup.device.WifiHelper
 import dev.achmad.core.util.injectLazy
 import dev.achmad.data.attendance.AttendancePreference
 import dev.achmad.alephup.ui.util.workManager
@@ -24,13 +22,13 @@ class ResetAndMaybePostAttendanceJob(
 
     private val attendancePreference by injectLazy<AttendancePreference>()
     private val postAttendance by injectLazy<PostAttendance>()
-    private val wifiMonitor by injectLazy<WifiMonitor>()
+    private val wifiHelper by injectLazy<WifiHelper>()
 
     override suspend fun doWork(): Result {
         val attendedPreference = attendancePreference.attended()
         attendedPreference.set(false)
-        val wifiInfo = wifiMonitor.currentWifiInfo.value
-        if (wifiInfo.isConnected) {
+        val wifiInfo = wifiHelper.currentWifiInfo.value
+        if (wifiInfo.connected) {
             postAttendance.await(wifiInfo.bssid)
         }
         return Result.success()

@@ -37,7 +37,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.achmad.alephup.R
 import dev.achmad.alephup.device.BootCompletedReceiver
-import dev.achmad.alephup.device.WifiMonitorService
+import dev.achmad.alephup.device.AttendanceService
 import dev.achmad.alephup.ui.components.CardSection
 import dev.achmad.alephup.ui.components.CardSectionItem
 import dev.achmad.alephup.ui.components.CardSectionButton
@@ -90,11 +90,11 @@ object HomeScreen: Screen {
                 notificationPermission.requestPermission()
                 return
             }
-            if (!WifiMonitorService.isRunning.value) {
-                WifiMonitorService.startService(applicationContext)
+            if (!AttendanceService.isRunning.value) {
+                AttendanceService.startService(applicationContext)
                 return
             }
-            WifiMonitorService.stopService(applicationContext)
+            AttendanceService.stopService(applicationContext)
         }
 
         fun toggleBoot() {
@@ -187,14 +187,14 @@ object HomeScreen: Screen {
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     CardSectionButton(
-                        text = if (!WifiMonitorService.isRunning.value)
+                        text = if (!AttendanceService.isRunning.value)
                             stringResource(R.string.enable_background_service)
                         else
                             stringResource(R.string.disable_background_service),
                         onClick = { toggleBackgroundService() },
                         enabled = toggleServiceEnabled,
-                        backgroundColor = if (WifiMonitorService.isRunning.value) Color.Red else null,
-                        contentColor = if (WifiMonitorService.isRunning.value) Color.White else null
+                        backgroundColor = if (AttendanceService.isRunning.value) Color.Red else null,
+                        contentColor = if (AttendanceService.isRunning.value) Color.White else null
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))

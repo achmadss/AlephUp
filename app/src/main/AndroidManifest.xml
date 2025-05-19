@@ -41,7 +41,7 @@
         </activity>
 
         <service
-            android:name=".device.WifiMonitorService"
+            android:name=".device.AttendanceService"
             android:foregroundServiceType="location"
             android:enabled="true"
             android:exported="false" />

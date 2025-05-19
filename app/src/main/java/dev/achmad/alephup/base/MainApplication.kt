@@ -2,7 +2,7 @@ package dev.achmad.alephup.base
 
 import android.app.Application
 import android.util.Log
-import dev.achmad.alephup.device.WifiMonitorService
+import dev.achmad.alephup.device.AttendanceService
 import dev.achmad.alephup.di.appModule
 import dev.achmad.alephup.util.NotificationHelper
 import dev.achmad.core.di.coreModule
@@ -46,7 +46,7 @@ class MainApplication: Application() {
         // notification channels
         notificationHelper.createNotificationChannels(
             listOf(
-                WifiMonitorService.createNotificationChannelConfig()
+                AttendanceService.createNotificationChannelConfig()
                 // add more if needed
             )
         )

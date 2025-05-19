@@ -31,11 +31,11 @@ data class WifiConnectionInfo(
     val signalStrength: Int = 0, // Calculated signal level (typically 0-99 or similar range)
     val networkId: Int = -1,
     val capabilities: String = "", // Formatted string of capabilities
-    val isConnected: Boolean = false
+    val connected: Boolean = false
 )
 
 /**
- * Represents the various states of Wi-Fi connectivity that can be emitted by the [WifiMonitor].
+ * Represents the various states of Wi-Fi connectivity that can be emitted by the [WifiHelper].
  */
 sealed interface WifiState {
     /** Initial state emitted when the monitoring flow starts. */
@@ -63,7 +63,7 @@ sealed interface WifiState {
  * This class attempts to fetch the best available information.
  */
 @SuppressLint("MissingPermission") // Caller is responsible for ensuring permissions.
-class WifiMonitor(private val context: Context) {
+class WifiHelper(private val context: Context) {
 
     private val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -145,7 +145,7 @@ class WifiMonitor(private val context: Context) {
                 signalStrength = signalStrength,
                 networkId = systemWifiInfo.networkId,
                 capabilities = getWifiCapabilitiesString(systemWifiInfo, signalStrength),
-                isConnected = true
+                connected = true
             )
             _currentWifiInfo.update { updatedInfo }
         } else {
@@ -196,7 +196,7 @@ class WifiMonitor(private val context: Context) {
                     super.onAvailable(network)
                     val newInfo = refreshAndGetCurrentWifiInfo()
                     // Ensure this 'available' network is indeed the one we are tracking (Wi-Fi)
-                    if (newInfo.isConnected) {
+                    if (newInfo.connected) {
                         trySend(WifiState.Connected(newInfo))
                     }
                     previousWifiInfoState = newInfo
@@ -206,7 +206,7 @@ class WifiMonitor(private val context: Context) {
                     super.onLost(network)
                     val infoAfterLoss = refreshAndGetCurrentWifiInfo() // Re-evaluate current state
                     // Only send Disconnected if it was previously connected via this monitor's perspective
-                    if (!infoAfterLoss.isConnected && previousWifiInfoState.isConnected) {
+                    if (!infoAfterLoss.connected && previousWifiInfoState.connected) {
                         trySend(WifiState.Disconnected)
                     }
                     previousWifiInfoState = infoAfterLoss
@@ -220,7 +220,7 @@ class WifiMonitor(private val context: Context) {
                     // Ensure it's still a Wi-Fi network; otherwise, treat as lost.
                     if (!networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
                         val infoAfterCapsChange = refreshAndGetCurrentWifiInfo()
-                        if (!infoAfterCapsChange.isConnected && previousWifiInfoState.isConnected) {
+                        if (!infoAfterCapsChange.connected && previousWifiInfoState.connected) {
                             trySend(WifiState.Disconnected)
                         }
                         previousWifiInfoState = infoAfterCapsChange
@@ -237,12 +237,13 @@ class WifiMonitor(private val context: Context) {
             object : BroadcastReceiver() {
                 override fun onReceive(context: Context, intent: Intent) {
                     val newInfo = refreshAndGetCurrentWifiInfo()
-                    if (newInfo.isConnected && !previousWifiInfoState.isConnected) {
-                        trySend(WifiState.Connected(newInfo))
-                    } else if (!newInfo.isConnected && previousWifiInfoState.isConnected) {
-                        trySend(WifiState.Disconnected)
-                    } else if (newInfo.isConnected && newInfo != previousWifiInfoState) {
-                        trySend(WifiState.InfoChanged(newInfo))
+                    when {
+                        newInfo.connected && !previousWifiInfoState.connected ->
+                            trySend(WifiState.Connected(newInfo))
+                        !newInfo.connected && previousWifiInfoState.connected ->
+                            trySend(WifiState.Disconnected)
+                        newInfo.connected && newInfo != previousWifiInfoState ->
+                            trySend(WifiState.InfoChanged(newInfo))
                     }
                     previousWifiInfoState = newInfo
                 }
@@ -282,7 +283,7 @@ class WifiMonitor(private val context: Context) {
      */
     fun isConnectedToSSID(ssid: String): Boolean {
         val current = _currentWifiInfo.value
-        return current.isConnected && current.ssid.equals(ssid, ignoreCase = true)
+        return current.connected && current.ssid.equals(ssid, ignoreCase = true)
     }
 
     /**
@@ -291,7 +292,7 @@ class WifiMonitor(private val context: Context) {
      */
     fun isConnectedToBSSID(bssid: String): Boolean {
         val current = _currentWifiInfo.value
-        return current.isConnected && current.bssid.equals(bssid, ignoreCase = true)
+        return current.connected && current.bssid.equals(bssid, ignoreCase = true)
     }
 
     /**
@@ -299,7 +300,7 @@ class WifiMonitor(private val context: Context) {
      */
     fun isConnectedToNetworkId(networkId: Int): Boolean {
         val current = _currentWifiInfo.value
-        return current.isConnected && current.networkId == networkId
+        return current.connected && current.networkId == networkId
     }
 
     /**
@@ -323,7 +324,7 @@ class WifiMonitor(private val context: Context) {
         networkId: Int? = null
     ): Boolean {
         val currentInfo = _currentWifiInfo.value
-        if (!currentInfo.isConnected) return false
+        if (!currentInfo.connected) return false
 
         // If no specific criteria, just being connected to Wi-Fi is enough
         if (ssid == null && bssid == null && networkId == null) {

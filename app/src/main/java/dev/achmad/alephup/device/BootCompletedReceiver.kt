@@ -43,7 +43,7 @@ class BootCompletedReceiver : BroadcastReceiver() {
             if (preference.serviceEnabledOnBoot().get()) {
                 // Wait a bit to ensure system is fully booted
                 Thread.sleep(5000)
-                WifiMonitorService.startService(context)
+                AttendanceService.startService(context)
             }
         }
     }

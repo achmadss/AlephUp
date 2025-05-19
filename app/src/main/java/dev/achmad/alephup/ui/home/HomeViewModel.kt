@@ -6,8 +6,8 @@ import androidx.lifecycle.viewModelScope
 import dev.achmad.alephup.device.BatteryOptimizationHelper
 import dev.achmad.alephup.device.BootCompletedPreference
 import dev.achmad.alephup.device.WifiConnectionInfo
-import dev.achmad.alephup.device.WifiMonitor
-import dev.achmad.alephup.device.WifiMonitorService
+import dev.achmad.alephup.device.WifiHelper
+import dev.achmad.alephup.device.AttendanceService
 import dev.achmad.alephup.device.WifiState
 import dev.achmad.core.util.inject
 import dev.achmad.data.attendance.AttendancePreference
@@ -24,7 +24,7 @@ data class HomeScreenState(
 )
 
 class HomeViewModel(
-    private val wifiMonitor: WifiMonitor = inject(),
+    private val wifiHelper: WifiHelper = inject(),
     private val batteryOptimizationHelper: BatteryOptimizationHelper = inject(),
     private val postAttendance: PostAttendance = inject(),
     bootCompletedPreference: BootCompletedPreference = inject(),
@@ -42,7 +42,7 @@ class HomeViewModel(
     }
 
     private fun observeWifiChanges() = viewModelScope.launch {
-        wifiMonitor.getWifiStateFlow().collect { wifiState ->
+        wifiHelper.getWifiStateFlow().collect { wifiState ->
             when(wifiState) {
                 is WifiState.Init,
                 is WifiState.Disconnected -> mutableState.update { HomeScreenState() }
@@ -53,7 +53,7 @@ class HomeViewModel(
                             wifiConnectionInfo = wifiInfo
                         )
                     }
-                    if (!WifiMonitorService.isRunning.value) {
+                    if (!AttendanceService.isRunning.value) {
                         postAttendance.await(wifiInfo.bssid)
                     }
                 }
