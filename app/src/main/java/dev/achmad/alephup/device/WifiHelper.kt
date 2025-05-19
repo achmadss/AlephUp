@@ -275,34 +275,6 @@ class WifiHelper(private val context: Context) {
         }
     }
 
-    // --- Utility functions using the currentWifiInfo StateFlow ---
-
-    /**
-     * Checks if currently connected to a Wi-Fi network with the specified SSID.
-     * Comparison is case-insensitive.
-     */
-    fun isConnectedToSSID(ssid: String): Boolean {
-        val current = _currentWifiInfo.value
-        return current.connected && current.ssid.equals(ssid, ignoreCase = true)
-    }
-
-    /**
-     * Checks if currently connected to a Wi-Fi network with the specified BSSID (MAC address).
-     * Comparison is case-insensitive.
-     */
-    fun isConnectedToBSSID(bssid: String): Boolean {
-        val current = _currentWifiInfo.value
-        return current.connected && current.bssid.equals(bssid, ignoreCase = true)
-    }
-
-    /**
-     * Checks if currently connected to a Wi-Fi network with the specified network ID.
-     */
-    fun isConnectedToNetworkId(networkId: Int): Boolean {
-        val current = _currentWifiInfo.value
-        return current.connected && current.networkId == networkId
-    }
-
     /**
      * Checks if the device has an active and validated internet connection through any network.
      */
