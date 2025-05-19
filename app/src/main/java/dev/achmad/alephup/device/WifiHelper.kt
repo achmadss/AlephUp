@@ -306,7 +306,7 @@ class WifiHelper(private val context: Context) {
     /**
      * Checks if the device has an active and validated internet connection through any network.
      */
-    fun hasInternetConnection(): Boolean {
+    fun isConnectedToInternet(): Boolean {
         val activeNetwork = connectivityManager.activeNetwork ?: return false
         val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork) ?: return false
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
