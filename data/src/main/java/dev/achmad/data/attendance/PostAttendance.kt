@@ -5,7 +5,7 @@ import dev.achmad.core.BSSID_TARGETS
 import dev.achmad.core.network.GET
 import dev.achmad.core.network.NetworkHelper
 import dev.achmad.core.network.await
-import dev.achmad.core.util.injectLazy
+import dev.achmad.core.util.extension.injectLazy
 import java.time.LocalDate
 
 class PostAttendance(

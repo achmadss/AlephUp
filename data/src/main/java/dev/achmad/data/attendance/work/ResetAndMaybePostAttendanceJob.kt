@@ -1,4 +1,4 @@
-package dev.achmad.alephup.ui.home
+package dev.achmad.data.attendance.work
 
 import android.content.Context
 import androidx.work.CoroutineWorker
@@ -6,10 +6,10 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequest
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkerParameters
-import dev.achmad.alephup.device.WifiHelper
-import dev.achmad.core.util.injectLazy
+import dev.achmad.core.device.wifi.WifiHelper
+import dev.achmad.core.util.extension.workManager
+import dev.achmad.core.util.extension.injectLazy
 import dev.achmad.data.attendance.AttendancePreference
-import dev.achmad.alephup.ui.util.workManager
 import dev.achmad.data.attendance.PostAttendance
 import java.time.Duration
 import java.time.LocalDateTime

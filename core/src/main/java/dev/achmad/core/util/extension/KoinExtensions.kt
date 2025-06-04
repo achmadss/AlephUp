@@ -1,4 +1,4 @@
-package dev.achmad.core.util
+package dev.achmad.core.util.extension
 
 import org.koin.core.qualifier.named
 import org.koin.mp.KoinPlatformTools

@@ -6,3 +6,5 @@ val BSSID_TARGETS = listOf(
 )
 
 const val BASE_URL = "https://achmad.dev"
+
+const val REQUEST_BATTERY_OPTIMIZATION_REQUEST_CODE = 1001

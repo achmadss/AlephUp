@@ -1,4 +1,4 @@
-package dev.achmad.alephup.util
+package dev.achmad.core.device.notification
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -27,7 +27,7 @@ class NotificationHelper(
         val context: Context,
         val pendingIntent: PendingIntent? = null,
         val onGoing: Boolean = true, // Typical for foreground services
-        val autoCancel: Boolean = false, // Usually false for foreground services
+        val autoCancel: Boolean = true, // Usually false for foreground services
         val priority: Int = NotificationCompat.PRIORITY_LOW // For pre-Oreo
     )
 

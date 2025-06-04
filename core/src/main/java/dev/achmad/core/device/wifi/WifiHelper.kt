@@ -1,4 +1,4 @@
-package dev.achmad.alephup.device
+package dev.achmad.core.device.wifi
 
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
@@ -18,35 +18,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.update
-
-/**
- * Data class representing Wi-Fi connection information.
- */
-data class WifiConnectionInfo(
-    val ssid: String = "",
-    val bssid: String = "", // MAC address
-    val ipAddress: String = "",
-    val linkSpeed: Int = 0, // Mbps
-    val frequency: Int = 0, // MHz
-    val signalStrength: Int = 0, // Calculated signal level (typically 0-99 or similar range)
-    val networkId: Int = -1,
-    val capabilities: String = "", // Formatted string of capabilities
-    val connected: Boolean = false
-)
-
-/**
- * Represents the various states of Wi-Fi connectivity that can be emitted by the [WifiHelper].
- */
-sealed interface WifiState {
-    /** Initial state emitted when the monitoring flow starts. */
-    data object Init : WifiState
-    /** Indicates that Wi-Fi has connected, providing current connection details. */
-    data class Connected(val wifiInfo: WifiConnectionInfo) : WifiState
-    /** Indicates that Wi-Fi has disconnected. */
-    data object Disconnected : WifiState
-    /** Indicates that Wi-Fi connection information has changed while remaining connected. */
-    data class InfoChanged(val wifiInfo: WifiConnectionInfo) : WifiState
-}
 
 /**
  * Helper class to monitor Wi-Fi connections and provide a Flow of [WifiState] changes.

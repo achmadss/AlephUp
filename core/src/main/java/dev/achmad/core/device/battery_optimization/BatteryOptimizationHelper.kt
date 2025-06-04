@@ -1,4 +1,4 @@
-package dev.achmad.alephup.device
+package dev.achmad.core.device.battery_optimization
 
 import android.content.Context
 import android.content.Intent

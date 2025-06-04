@@ -47,4 +47,6 @@ dependencies {
     implementation(platform(libs.koin.bom))
     implementation(libs.koin.android)
 
+    implementation(libs.androidx.work.runtime.ktx)
+
 }

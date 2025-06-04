@@ -33,7 +33,7 @@ import dev.achmad.alephup.R
 import dev.achmad.alephup.ui.components.CardSection
 import dev.achmad.alephup.ui.components.CardSectionItem
 import dev.achmad.alephup.ui.home.HomeScreen
-import dev.achmad.alephup.ui.util.rememberMultiplePermissionsState
+import dev.achmad.alephup.util.rememberMultiplePermissionsState
 
 object OnBoardingScreen: Screen {
     private fun readResolve(): Any = OnBoardingScreen

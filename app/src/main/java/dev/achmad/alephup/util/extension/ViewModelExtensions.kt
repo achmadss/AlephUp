@@ -1,4 +1,4 @@
-package dev.achmad.alephup.ui.util
+package dev.achmad.alephup.util.extension
 
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.LocalActivity

@@ -41,13 +41,13 @@
         </activity>
 
         <service
-            android:name=".device.AttendanceService"
+            android:name=".base.service.AttendanceService"
             android:foregroundServiceType="location"
             android:enabled="true"
             android:exported="false" />
 
         <receiver
-            android:name=".device.BootCompletedReceiver"
+            android:name=".base.receiver.BootReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>

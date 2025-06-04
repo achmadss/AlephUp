@@ -1,4 +1,4 @@
-package dev.achmad.alephup.ui.util
+package dev.achmad.core.util.extension
 
 import android.content.Context
 import androidx.work.WorkInfo
