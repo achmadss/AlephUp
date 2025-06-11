@@ -23,9 +23,6 @@ interface Preference<T> {
     fun stateIn(scope: CoroutineScope): StateFlow<T>
 
     companion object {
-        /**
-         * A preference that should not be exposed in places like backups without user consent.
-         */
         fun isPrivate(key: String): Boolean {
             return key.startsWith(PRIVATE_PREFIX)
         }
@@ -33,10 +30,6 @@ interface Preference<T> {
             return "$PRIVATE_PREFIX$key"
         }
 
-        /**
-         * A preference used for internal app state that isn't really a user preference
-         * and therefore should not be in places like backups.
-         */
         fun isAppState(key: String): Boolean {
             return key.startsWith(APP_STATE_PREFIX)
         }

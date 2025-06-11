@@ -30,6 +30,7 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.achmad.alephup.R
+import dev.achmad.alephup.base.MainApplication.Companion.requiredPermissions
 import dev.achmad.alephup.ui.components.CardSection
 import dev.achmad.alephup.ui.components.CardSectionItem
 import dev.achmad.alephup.ui.home.HomeScreen
@@ -41,15 +42,7 @@ object OnBoardingScreen: Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val requiredPermissions = rememberMultiplePermissionsState(
-            listOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.ACCESS_NETWORK_STATE,
-                Manifest.permission.ACCESS_WIFI_STATE,
-                Manifest.permission.CHANGE_WIFI_STATE,
-            )
-        )
+        val requiredPermissions = rememberMultiplePermissionsState(requiredPermissions)
 
         Box(
             modifier = Modifier

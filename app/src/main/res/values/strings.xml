@@ -10,8 +10,10 @@
     <string name="onboarding_permission_location">Allow location permission</string>
     <string name="onboarding_permission_location_description">Required to accurately verify attendance using Wi-Fi</string>
 
-    <string name="connected_to">Connected: %s</string>
-    <string name="not_connected">Not Connected</string>
+    <string name="greet">Hello %s!</string>
+
+    <string name="connected_to">Wifi connected: %s</string>
+    <string name="not_connected">Wifi not connected</string>
     <string name="enable_optional_settings">To ensure consistent automatic attendance, you can enable optional settings above. </string>
 
     <string name="allow_required_permission_to_enable_background_service">The app cannot run in background (including on device boot) if required permissions are not granted.</string>

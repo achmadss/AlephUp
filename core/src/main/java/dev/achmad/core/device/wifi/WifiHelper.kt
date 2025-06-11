@@ -153,7 +153,6 @@ class WifiHelper(private val context: Context) {
      * `shareIn` or `stateIn` to the Flow returned by this function.
      *
      * Emitted states:
-     * - [WifiState.Init]: Sent immediately upon starting collection.
      * - [WifiState.Connected]: When a Wi-Fi connection is established or detected.
      * - [WifiState.Disconnected]: When the Wi-Fi connection is lost.
      * - [WifiState.InfoChanged]: When properties of an active Wi-Fi connection change (e.g., signal strength).
@@ -199,7 +198,13 @@ class WifiHelper(private val context: Context) {
                     }
 
                     val newInfo = refreshAndGetCurrentWifiInfo()
+                    if (!previousWifiInfoState.connected && newInfo.connected) {
+                        previousWifiInfoState = newInfo
+                        trySend(WifiState.Connected(newInfo))
+                        return
+                    }
                     previousWifiInfoState = newInfo
+                    trySend(WifiState.InfoChanged(newInfo))
                 }
             }
         } else null
@@ -237,7 +242,7 @@ class WifiHelper(private val context: Context) {
         }
 
         // Emit initial state after registration
-        trySend(WifiState.Init)
+        trySend(WifiState.Disconnected)
 
         // Cleanup: Unregister callbacks when the flow's collector is cancelled
         awaitClose {

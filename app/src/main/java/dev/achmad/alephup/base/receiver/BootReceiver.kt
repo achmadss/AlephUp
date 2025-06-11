@@ -15,10 +15,6 @@ import dev.achmad.core.util.extension.injectLazy
  */
 class BootReceiver : BroadcastReceiver() {
 
-    companion object {
-        const val KEY_RUN_IN_BACKGROUND_ON_BOOT = "KEY_RUN_IN_BACKGROUND_ON_BOOT"
-    }
-
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED) {
             val preference by injectLazy<ApplicationPreferences>()

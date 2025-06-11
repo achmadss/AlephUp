@@ -20,16 +20,14 @@ class ResetAndMaybePostAttendanceJob(
     workerParams: WorkerParameters
 ): CoroutineWorker(context, workerParams) {
 
-    private val attendancePreference by injectLazy<AttendancePreference>()
     private val postAttendance by injectLazy<PostAttendance>()
     private val wifiHelper by injectLazy<WifiHelper>()
 
     override suspend fun doWork(): Result {
-        val attendedPreference = attendancePreference.attended()
-        attendedPreference.set(false)
         val wifiInfo = wifiHelper.currentWifiInfo.value
         if (wifiInfo.connected) {
-            postAttendance.await(wifiInfo.bssid)
+//            postAttendance.await(wifiInfo.bssid)
+            postAttendance.await(wifiInfo.ssid)
         }
         return Result.success()
     }

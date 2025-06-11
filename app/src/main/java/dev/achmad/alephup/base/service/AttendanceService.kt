@@ -89,7 +89,8 @@ class AttendanceService: Service() {
                 when(wifiState) {
                     is WifiState.Connected -> {
                         val wifiInfo = wifiState.wifiInfo
-                        postAttendance.await(wifiInfo.bssid)
+//                        postAttendance.await(wifiInfo.bssid)
+                        postAttendance.await(wifiInfo.ssid)
                     }
                     else -> Unit
                 }
