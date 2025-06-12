@@ -39,7 +39,6 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.achmad.alephup.R
-import dev.achmad.alephup.ui.auth.LoginScreen
 import dev.achmad.alephup.ui.components.AppBar
 import dev.achmad.alephup.ui.components.AppBarActions
 import dev.achmad.alephup.ui.settings.screens.SettingsScreen
