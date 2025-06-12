@@ -23,7 +23,7 @@ import dev.achmad.alephup.ui.settings.widget.PermissionPreferenceWidget
 import dev.achmad.alephup.ui.settings.widget.SwitchPreferenceWidget
 import dev.achmad.alephup.ui.settings.widget.TextPreferenceWidget
 import dev.achmad.alephup.util.extension.collectAsState
-import dev.achmad.alephup.util.extension.customTouch
+import dev.achmad.alephup.util.extension.onClickInput
 import kotlinx.coroutines.launch
 
 val LocalPreferenceHighlighted = compositionLocalOf(structuralEqualityPolicy()) { false }
@@ -42,8 +42,9 @@ fun StatusWrapper(
         modifier = Modifier
             .then(
                 if (!enabled) {
-                    Modifier.customTouch(
+                    Modifier.onClickInput(
                         pass = PointerEventPass.Initial,
+                        ripple = false,
                         onUp = {
                             // do nothing
                         }
@@ -154,6 +155,8 @@ internal fun PreferenceItem(
                 TextPreferenceWidget(
                     title = item.title,
                     subtitle = item.subtitle,
+                    titleColor = item.titleColor,
+                    subtitleColor = item.subtitleColor,
                     icon = item.icon,
                     onPreferenceClick = item.onClick,
                 )
@@ -175,6 +178,17 @@ internal fun PreferenceItem(
             }
             is Preference.PreferenceItem.InfoPreference -> {
                 InfoWidget(text = item.title)
+            }
+            is Preference.PreferenceItem.MultiplePermissionPreference -> {
+                PermissionPreferenceWidget(
+                    enabled = item.enabled,
+                    isGranted = item.permissionState.isAllPermissionsGranted(),
+                    title = item.title,
+                    subtitle = item.subtitle,
+                    onRequestPermission = {
+                        item.permissionState.requestPermissions()
+                    }
+                )
             }
             is Preference.PreferenceItem.PermissionPreference -> {
                 PermissionPreferenceWidget(

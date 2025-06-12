@@ -242,7 +242,7 @@ class WifiHelper(private val context: Context) {
         }
 
         // Emit initial state after registration
-        trySend(WifiState.Disconnected)
+        trySend(WifiState.Init)
 
         // Cleanup: Unregister callbacks when the flow's collector is cancelled
         awaitClose {

@@ -13,11 +13,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -34,10 +33,11 @@ class PermissionState internal constructor(
 )
 
 class MultiplePermissionsState internal constructor(
-    val permissions: Map<String, Boolean>,
-    val requiredPermissionsGranted: State<Boolean>,
+    val permissions: SnapshotStateMap<String, Boolean>,
     val requestPermissions: () -> Unit
-)
+) {
+    fun isAllPermissionsGranted() = permissions.values.all { it }
+}
 
 @Composable
 fun rememberPermissionState(
@@ -45,6 +45,7 @@ fun rememberPermissionState(
 ): PermissionState {
     val context = LocalContext.current
     val activity = LocalActivity.current
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     val permissionGranted = remember {
         mutableStateOf(
@@ -56,6 +57,20 @@ fun rememberPermissionState(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         permissionGranted.value = isGranted
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    permissionGranted.value =
+                        ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+                }
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     return remember(permission) {
@@ -73,23 +88,15 @@ fun rememberPermissionState(
 @Composable
 fun rememberMultiplePermissionsState(
     permissions: List<String>,
-    requiredPermissions: List<String> = permissions
 ): MultiplePermissionsState {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     val permissionResults = remember {
         mutableStateMapOf<String, Boolean>().apply {
             permissions.forEach { permission ->
                 val granted = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
                 put(permission, granted)
             }
-        }
-    }
-
-    val requiredPermissionsGranted = remember {
-        derivedStateOf {
-            permissionResults
-                .filter { it.key in requiredPermissions }.values
-                .all { it }
         }
     }
 
@@ -101,10 +108,25 @@ fun rememberMultiplePermissionsState(
         }
     }
 
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    permissions.forEach { permission ->
+                        val granted = ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+                        permissionResults[permission] = granted
+                    }
+                }
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     return remember(permissions) {
         MultiplePermissionsState(
             permissions = permissionResults,
-            requiredPermissionsGranted = requiredPermissionsGranted,
             requestPermissions = {
                 launcher.launch(permissions.toTypedArray())
             }
@@ -119,7 +141,6 @@ fun Context.arePermissionsAllowed(
         ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
     }
 }
-
 
 @Composable
 fun rememberBackgroundLocationPermissionState(): PermissionState {

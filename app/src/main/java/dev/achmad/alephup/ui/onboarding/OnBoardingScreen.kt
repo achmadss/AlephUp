@@ -1,6 +1,5 @@
 package dev.achmad.alephup.ui.onboarding
 
-import android.Manifest
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -31,6 +30,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.achmad.alephup.R
 import dev.achmad.alephup.base.MainApplication.Companion.requiredPermissions
+import dev.achmad.alephup.ui.auth.LoginScreen
 import dev.achmad.alephup.ui.components.CardSection
 import dev.achmad.alephup.ui.components.CardSectionItem
 import dev.achmad.alephup.ui.home.HomeScreen
@@ -42,7 +42,7 @@ object OnBoardingScreen: Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val requiredPermissions = rememberMultiplePermissionsState(requiredPermissions)
+        val permissions = rememberMultiplePermissionsState(requiredPermissions)
 
         Box(
             modifier = Modifier
@@ -96,18 +96,18 @@ object OnBoardingScreen: Screen {
                     CardSectionItem(
                         text = stringResource(R.string.onboarding_permission_location),
                         description = stringResource(R.string.onboarding_permission_location_description),
-                        isGranted = requiredPermissions.requiredPermissionsGranted.value,
+                        isGranted = permissions.isAllPermissionsGranted(),
                         onRequestPermission = {
-                            requiredPermissions.requestPermissions.invoke()
+                            permissions.requestPermissions.invoke()
                         }
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     modifier = Modifier.align(Alignment.End),
-                    enabled = requiredPermissions.requiredPermissionsGranted.value,
+                    enabled = permissions.isAllPermissionsGranted(),
                     onClick = {
-                        navigator.replace(HomeScreen)
+                        navigator.replace(LoginScreen)
                     },
                     contentPadding = PaddingValues(
                         start = 64.dp,

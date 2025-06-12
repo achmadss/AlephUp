@@ -16,6 +16,8 @@ fun TextPreferenceWidget(
     modifier: Modifier = Modifier,
     title: String? = null,
     subtitle: CharSequence? = null,
+    titleColor: Color = Color.Unspecified,
+    subtitleColor: Color = Color.Unspecified,
     icon: ImageVector? = null,
     iconTint: Color = MaterialTheme.colorScheme.primary,
     widget: @Composable (() -> Unit)? = null,
@@ -24,9 +26,9 @@ fun TextPreferenceWidget(
     BasePreferenceWidget(
         modifier = modifier,
         title = title,
+        titleColor = titleColor,
         subcomponent = if (!subtitle.isNullOrBlank()) {
             {
-                // SY -->
                 if (subtitle is AnnotatedString) {
                     Text(
                         text = subtitle,
@@ -34,16 +36,17 @@ fun TextPreferenceWidget(
                             .padding(horizontal = PrefsHorizontalPadding)
                             .secondaryItemAlpha(),
                         style = MaterialTheme.typography.bodySmall,
+                        color = subtitleColor,
                         maxLines = 10,
                     )
                 } else {
-                    // SY <--
                     Text(
                         text = subtitle.toString(),
                         modifier = Modifier
                             .padding(horizontal = PrefsHorizontalPadding)
                             .secondaryItemAlpha(),
                         style = MaterialTheme.typography.bodySmall,
+                        color = subtitleColor,
                         maxLines = 10,
                     )
                 }

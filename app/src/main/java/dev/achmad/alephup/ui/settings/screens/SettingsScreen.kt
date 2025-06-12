@@ -3,21 +3,32 @@ package dev.achmad.alephup.ui.settings.screens
 import androidx.activity.compose.LocalActivity
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.achmad.alephup.R
-import dev.achmad.alephup.base.service.AttendanceService
+import dev.achmad.alephup.base.MainApplication.Companion.requiredPermissions
 import dev.achmad.alephup.base.preferences.ApplicationPreferences
+import dev.achmad.alephup.base.service.AttendanceService
+import dev.achmad.alephup.ui.auth.LoginScreen
 import dev.achmad.alephup.ui.settings.Preference
 import dev.achmad.alephup.ui.settings.PreferenceScreen
+import dev.achmad.alephup.util.MultiplePermissionsState
 import dev.achmad.alephup.util.PermissionState
-import dev.achmad.alephup.util.rememberBackgroundLocationPermissionState
+import dev.achmad.alephup.util.extension.rememberFirebaseUser
 import dev.achmad.alephup.util.rememberIgnoreBatteryOptimizationPermissionState
+import dev.achmad.alephup.util.rememberMultiplePermissionsState
 import dev.achmad.alephup.util.rememberNotificationPermissionState
 import dev.achmad.core.util.extension.injectLazy
+import dev.achmad.data.auth.GoogleAuth
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 object SettingsScreen: Screen {
@@ -26,27 +37,34 @@ object SettingsScreen: Screen {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        var loading by remember { mutableStateOf(false) }
         val applicationPreferences by remember { injectLazy<ApplicationPreferences>() }
-        val backgroundLocationPermission = rememberBackgroundLocationPermissionState()
+        val locationPermissions = rememberMultiplePermissionsState(requiredPermissions)
         val notificationPermission = rememberNotificationPermissionState()
 
         PreferenceScreen(
             title = "Settings", // TODO copy
+            loading = loading,
             onBackPressed = {
                 navigator.pop()
             },
             itemsProvider = {
                 listOf(
                     getPermissionGroup(
-                        backgroundLocationPermission = backgroundLocationPermission,
+                        locationPermissions = locationPermissions,
                         notificationPermission = notificationPermission,
                     ),
                     getBackgroundServiceGroup(
                         applicationPreferences = applicationPreferences,
-                        backgroundLocationPermission = backgroundLocationPermission,
+                        locationPermissions = locationPermissions,
                         notificationPermission = notificationPermission,
                     ),
                     getBatteryOptimizationGroup(),
+                    getAccountGroup(
+                        onSignOut = {
+                            loading = true
+                        }
+                    ),
                 )
             },
         )
@@ -54,14 +72,14 @@ object SettingsScreen: Screen {
 
     @Composable
     private fun getPermissionGroup(
-        backgroundLocationPermission: PermissionState,
+        locationPermissions: MultiplePermissionsState,
         notificationPermission: PermissionState,
     ): Preference.PreferenceGroup {
         return Preference.PreferenceGroup(
             title = stringResource(R.string.permission_group_title),
             preferenceItems = listOf(
-                Preference.PreferenceItem.PermissionPreference(
-                    permissionState = backgroundLocationPermission,
+                Preference.PreferenceItem.MultiplePermissionPreference(
+                    permissionState = locationPermissions,
                     title = stringResource(R.string.allow_location_permission_all_the_time),
                     subtitle = stringResource(R.string.required_for_wifi_monitoring),
                 ),
@@ -77,7 +95,7 @@ object SettingsScreen: Screen {
     @Composable
     private fun getBackgroundServiceGroup(
         applicationPreferences: ApplicationPreferences,
-        backgroundLocationPermission: PermissionState,
+        locationPermissions: MultiplePermissionsState,
         notificationPermission: PermissionState,
     ): Preference.PreferenceGroup {
         val applicationContext = LocalActivity.currentOrThrow.applicationContext
@@ -87,7 +105,7 @@ object SettingsScreen: Screen {
                 Preference.PreferenceItem.BasicSwitchPreference(
                     value = AttendanceService.isRunning,
                     title = stringResource(R.string.run_in_background),
-                    enabled = backgroundLocationPermission.isGranted.value && notificationPermission.isGranted.value,
+                    enabled = locationPermissions.isAllPermissionsGranted() && notificationPermission.isGranted.value,
                     onValueChanged = { newValue ->
                         if (newValue) AttendanceService.startService(applicationContext)
                         else AttendanceService.stopService(applicationContext)
@@ -98,7 +116,7 @@ object SettingsScreen: Screen {
                     preference = applicationPreferences.runInBackgroundOnBoot(),
                     title = stringResource(R.string.start_service_on_boot),
                     subtitle = stringResource(R.string.start_service_on_boot_description),
-                    enabled = backgroundLocationPermission.isGranted.value && notificationPermission.isGranted.value,
+                    enabled = locationPermissions.isAllPermissionsGranted() && notificationPermission.isGranted.value,
                 ),
                 Preference.PreferenceItem.InfoPreference(
                     title = stringResource(R.string.allow_required_permission_to_enable_background_service)
@@ -121,4 +139,39 @@ object SettingsScreen: Screen {
             )
         )
     }
+
+    @Composable
+    private fun getAccountGroup(
+        onSignOut: () -> Unit,
+    ): Preference.PreferenceGroup {
+        val context = LocalActivity.currentOrThrow.applicationContext
+        val navigator = LocalNavigator.currentOrThrow
+        val user = rememberFirebaseUser()
+        val scope = rememberCoroutineScope()
+        val googleAuth by remember { injectLazy<GoogleAuth>() }
+        return Preference.PreferenceGroup(
+            title = stringResource(R.string.account),
+            preferenceItems = listOf(
+                Preference.PreferenceItem.TextPreference(
+                    title = stringResource(R.string.sign_out),
+                    titleColor = Color.Red,
+                    subtitle = stringResource(
+                        id = R.string.signed_in_as,
+                        user?.displayName ?: "Unknown Username",
+                        user?.email ?: "Unknown Email"
+                    ),
+                    onClick = {
+                        scope.launch {
+                            onSignOut()
+                            AttendanceService.stopService(context)
+                            googleAuth.signOut()
+                            navigator.popUntilRoot()
+                            navigator.replace(LoginScreen)
+                        }
+                    }
+                )
+            )
+        )
+    }
+
 }

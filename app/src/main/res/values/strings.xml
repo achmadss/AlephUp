@@ -29,6 +29,9 @@
 
     <string name="permission_group_title">Permission</string>
 
+    <string name="post_attendance_success">You have checked-in for today</string>
+    <string name="run_in_background_notification">AlephUp is now running in the background</string>
+
     <string name="allow_notifications">Allow notifications</string>
     <string name="required_for_background_notification">Required by Android to inform you that this app is running in the background</string>
 
@@ -38,4 +41,8 @@
     <string name="enable_background_service">Enable Background Service</string>
     <string name="disable_background_service">Disable Background Service</string>
     <string name="run_in_background">Run in background</string>
+
+    <string name="account">Account</string>
+    <string name="sign_out">Sign out</string>
+    <string name="signed_in_as">Signed in as %s (%s)</string>
 </resources>

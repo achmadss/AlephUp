@@ -3,9 +3,9 @@ package dev.achmad.alephup.base.receiver
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import dev.achmad.alephup.base.preferences.ApplicationPreferences
 import dev.achmad.alephup.base.MainApplication.Companion.backgroundPermissions
 import dev.achmad.alephup.base.MainApplication.Companion.requiredPermissions
+import dev.achmad.alephup.base.preferences.ApplicationPreferences
 import dev.achmad.alephup.base.service.AttendanceService
 import dev.achmad.alephup.util.arePermissionsAllowed
 import dev.achmad.core.util.extension.injectLazy

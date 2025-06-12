@@ -15,6 +15,7 @@ class NotificationHelper(
 ) {
 
     private val TAG = "NotificationHelper"
+    private val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
     /**
      * Data class to hold configuration for a notification.
@@ -26,8 +27,8 @@ class NotificationHelper(
         @DrawableRes val smallIconResId: Int,
         val context: Context,
         val pendingIntent: PendingIntent? = null,
-        val onGoing: Boolean = true, // Typical for foreground services
-        val autoCancel: Boolean = true, // Usually false for foreground services
+        val onGoing: Boolean = false,
+        val autoCancel: Boolean = true,
         val priority: Int = NotificationCompat.PRIORITY_LOW // For pre-Oreo
     )
 
@@ -52,7 +53,6 @@ class NotificationHelper(
     fun createNotificationChannels(
         channels: List<Channel>
     ) {
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannels(
             channels.map { config ->
                 NotificationChannel(
@@ -182,5 +182,9 @@ class NotificationHelper(
             intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
+    }
+
+    fun cancel(notificationId: Int) {
+        notificationManager.cancel(notificationId)
     }
 }

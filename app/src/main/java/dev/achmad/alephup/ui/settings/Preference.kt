@@ -2,7 +2,9 @@ package dev.achmad.alephup.ui.settings
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import dev.achmad.alephup.util.MultiplePermissionsState
 import dev.achmad.alephup.util.PermissionState
 import dev.achmad.core.preference.Preference as PreferenceData
 
@@ -24,6 +26,8 @@ sealed class Preference {
             override val subtitle: CharSequence? = null,
             override val visible: Boolean = true,
             override val enabled: Boolean = true,
+            val titleColor: Color = Color.Unspecified,
+            val subtitleColor: Color = Color.Unspecified,
             val onClick: (() -> Unit)? = null,
         ) : PreferenceItem<String>() {
             override val icon: ImageVector? = null
@@ -144,6 +148,17 @@ sealed class Preference {
             override val onValueChanged: suspend (value: String) -> Boolean = { true }
         }
 
+        data class MultiplePermissionPreference(
+            val permissionState: MultiplePermissionsState,
+            override val title: String,
+            override val subtitle: String? = null,
+            override val visible: Boolean = true,
+            override val enabled: Boolean = true,
+        ): PreferenceItem<Unit>() {
+            override val icon: ImageVector? = null
+            override val onValueChanged: suspend (value: Unit) -> Boolean = { true }
+        }
+
         data class PermissionPreference(
             val permissionState: PermissionState,
             override val title: String,
@@ -156,9 +171,9 @@ sealed class Preference {
         }
 
         data class CustomPreference(
-            override val title: String,
             val content: @Composable () -> Unit,
         ) : PreferenceItem<Unit>() {
+            override val title: String = ""
             override val visible: Boolean = true
             override val enabled: Boolean = true
             override val subtitle: String? = null

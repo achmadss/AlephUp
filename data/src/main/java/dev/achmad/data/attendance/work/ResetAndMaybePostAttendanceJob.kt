@@ -7,9 +7,8 @@ import androidx.work.PeriodicWorkRequest
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkerParameters
 import dev.achmad.core.device.wifi.WifiHelper
-import dev.achmad.core.util.extension.workManager
 import dev.achmad.core.util.extension.injectLazy
-import dev.achmad.data.attendance.AttendancePreference
+import dev.achmad.core.util.extension.workManager
 import dev.achmad.data.attendance.PostAttendance
 import java.time.Duration
 import java.time.LocalDateTime
@@ -26,8 +25,7 @@ class ResetAndMaybePostAttendanceJob(
     override suspend fun doWork(): Result {
         val wifiInfo = wifiHelper.currentWifiInfo.value
         if (wifiInfo.connected) {
-//            postAttendance.await(wifiInfo.bssid)
-            postAttendance.await(wifiInfo.ssid)
+            postAttendance.execute(wifiInfo.ssid)
         }
         return Result.success()
     }

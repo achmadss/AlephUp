@@ -7,46 +7,60 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Password
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.Icon
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.core.screen.Screen
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.achmad.alephup.R
+import dev.achmad.alephup.ui.home.HomeScreen
+import dev.achmad.alephup.util.extension.rememberFirebaseUser
+import dev.achmad.alephup.util.toast
+import dev.achmad.core.util.extension.injectLazy
+import dev.achmad.data.auth.GoogleAuth
+import kotlinx.coroutines.launch
 
 object LoginScreen: Screen {
     private fun readResolve(): Any = LoginScreen
 
     @Composable
     override fun Content() {
-        val viewModel = viewModel<LoginScreenViewModel>()
-        var textFieldEmailValue by remember { mutableStateOf("") }
-        var textFieldPasswordValue by remember { mutableStateOf("") }
+        val navigator = LocalNavigator.currentOrThrow
+        val scope = rememberCoroutineScope()
+        val context = LocalContext.current
+        val googleAuth by remember { injectLazy<GoogleAuth>() }
+        var loading by remember { mutableStateOf(false) }
+        var validEmail by remember { mutableStateOf(true) }
+        val user = rememberFirebaseUser()
+
+        LaunchedEffect(user) {
+            if (user != null && validEmail) {
+                navigator.popUntilRoot()
+                navigator.replace(HomeScreen)
+                return@LaunchedEffect
+            }
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -58,7 +72,7 @@ object LoginScreen: Screen {
                 modifier = Modifier
                     .height(36.dp),
                 contentScale = ContentScale.FillHeight,
-                painter = painterResource(R.drawable.logo),
+                painter = painterResource(R.drawable.aleph_logo_white),
                 contentDescription = "logo"
             )
             Spacer(modifier = Modifier.height(32.dp))
@@ -69,70 +83,51 @@ object LoginScreen: Screen {
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(modifier = Modifier.height(16.dp))
-            OutlinedTextField(
-                value = textFieldEmailValue,
-                onValueChange = {
-                    textFieldEmailValue = it
-                },
-                label = {
-                    Text("Email") // TODO copy
-                },
-                placeholder = {
-                    Text("Enter your aleph email") // TODO copy
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                    )
-                },
-                singleLine = true,
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            OutlinedTextField(
-                value = textFieldPasswordValue,
-                onValueChange = {
-                    textFieldPasswordValue = it
-                },
-                label = {
-                    Text("Password") // TODO copy
-                },
-                placeholder = {
-                    Text("Enter your password") // TODO copy
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Password,
-                        contentDescription = null,
-                    )
-                },
-                singleLine = true,
-            )
-            Spacer(modifier = Modifier.height(24.dp))
             Button(
                 modifier = Modifier
                     .width(TextFieldDefaults.MinWidth),
+                enabled = !loading,
                 onClick = {
-                    // TODO
+                    if (!loading) {
+                        scope.launch {
+                            loading = true
+                            googleAuth.signInWithGoogle(
+                                filterByAuthorized = true,
+                                onValidEmail = {
+                                    validEmail = true
+                                },
+                                onInvalidEmail = {
+                                    validEmail = false
+                                    googleAuth.signOut()
+                                    context.toast("Only Aleph Email is allowed")
+                                }
+                            ) ?: googleAuth.signInWithGoogle(
+                                filterByAuthorized = false,
+                                onValidEmail = {
+                                    validEmail = true
+                                },
+                                onInvalidEmail = {
+                                    validEmail = false
+                                    googleAuth.signOut()
+                                    context.toast("Only Aleph Email is allowed")
+                                }
+                            )
+                            loading = false
+                        }
+                    }
                 }
             ) {
-                Text(
-                    text = "Sign-in",
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            TextButton(
-                onClick = {
-                    // TODO
-                }
-            ) {
-                Text(
-                    text = "I need help with my account",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        textDecoration = TextDecoration.Underline
+                if (!loading) {
+                    Text(
+                        text = "Sign-in with Google",
+                        fontWeight = FontWeight.Bold
                     )
-                )
+                } else {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        color = LocalContentColor.current
+                    )
+                }
             }
         }
     }

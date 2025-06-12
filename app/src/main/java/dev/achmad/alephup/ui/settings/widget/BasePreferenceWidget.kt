@@ -38,6 +38,7 @@ import kotlin.time.Duration.Companion.seconds
 internal fun BasePreferenceWidget(
     modifier: Modifier = Modifier,
     title: String? = null,
+    titleColor: Color = Color.Unspecified,
     subcomponent: @Composable (ColumnScope.() -> Unit)? = null,
     icon: @Composable (() -> Unit)? = null,
     onClick: (() -> Unit)? = null,
@@ -68,6 +69,7 @@ internal fun BasePreferenceWidget(
                 Text(
                     modifier = Modifier.padding(horizontal = PrefsHorizontalPadding),
                     text = title,
+                    color = titleColor,
                     overflow = TextOverflow.Ellipsis,
                     maxLines = 2,
                     style = MaterialTheme.typography.titleLarge,

@@ -110,30 +110,37 @@ fun Modifier.clearFocusOnSoftKeyboardHide(
     }
 }
 
-fun Modifier.customTouch(
+fun Modifier.onClickInput(
     pass: PointerEventPass = PointerEventPass.Initial,
+    ripple: Boolean = true,
     onDown: () -> Unit = {},
     onUp: () -> Unit = {}
 ): Modifier = composed {
     val interactionSource = remember { MutableInteractionSource() }
-    val ripple = ripple()
+    val rippleIndication = if (ripple) ripple() else null
 
     this
-        .indication(interactionSource, ripple)
+        .indication(interactionSource, rippleIndication)
         .pointerInput(pass) {
             awaitEachGesture {
                 val down = awaitFirstDown(pass = pass)
                 val press = PressInteraction.Press(down.position)
-                interactionSource.tryEmit(press) // Start ripple
+                if (ripple) {
+                    interactionSource.tryEmit(press) // Start ripple
+                }
                 down.consume()
                 onDown()
 
                 val up = waitForUpOrCancellation(pass)
                 if (up != null) {
-                    interactionSource.tryEmit(PressInteraction.Release(press)) // End ripple
+                    if (ripple) {
+                        interactionSource.tryEmit(PressInteraction.Release(press)) // End ripple
+                    }
                     onUp()
                 } else {
-                    interactionSource.tryEmit(PressInteraction.Cancel(press))
+                    if (ripple) {
+                        interactionSource.tryEmit(PressInteraction.Cancel(press))
+                    }
                 }
             }
         }

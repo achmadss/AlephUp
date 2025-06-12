@@ -3,8 +3,6 @@ package dev.achmad.core.preference
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.preference.PreferenceManager
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.callbackFlow
 import dev.achmad.core.preference.AndroidPreference.BooleanPrimitive
 import dev.achmad.core.preference.AndroidPreference.FloatPrimitive
 import dev.achmad.core.preference.AndroidPreference.IntPrimitive
@@ -12,6 +10,8 @@ import dev.achmad.core.preference.AndroidPreference.LongPrimitive
 import dev.achmad.core.preference.AndroidPreference.Object
 import dev.achmad.core.preference.AndroidPreference.StringPrimitive
 import dev.achmad.core.preference.AndroidPreference.StringSetPrimitive
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
 
 class AndroidPreferenceStore(
     context: Context,
