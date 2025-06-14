@@ -59,7 +59,7 @@ class GoogleAuth(
      */
     override suspend fun signIn(options: Map<String, Boolean>): AuthResult {
         return signInWithGoogle(
-            filterByAuthorized = options[FILTER_BY_AUTHORIZED] ?: true
+            filterByAuthorized = options[FILTER_BY_AUTHORIZED] ?: false
         )
     }
     
@@ -209,7 +209,7 @@ class GoogleAuth(
         private const val FILTER_BY_AUTHORIZED = "FILTER_BY_AUTHORIZED"
 
         fun createOptions(
-            filterByAuthorized: Boolean = true,
+            filterByAuthorized: Boolean = false,
         ): Map<String, Boolean> {
             return mapOf(
                 FILTER_BY_AUTHORIZED to filterByAuthorized

@@ -7,7 +7,6 @@ import dev.achmad.alephup.util.toast
 import dev.achmad.core.util.extension.inject
 import dev.achmad.data.auth.Auth
 import dev.achmad.data.auth.AuthResult
-import dev.achmad.data.auth.google.GoogleAuth
 import dev.achmad.data.auth.google.exception.GoogleAuthInvalidEmailException
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -18,25 +17,16 @@ class SignInScreenModel(
 
     fun signIn(context: Context) = screenModelScope.launch {
         mutableState.update { SignInScreenState.Loading }
-        val result = trySignIn(context, filterByAuthorized = true)
-            ?: trySignIn(context, filterByAuthorized = false)
-        if (result is AuthResult.Error) {
-            context.toast(result.message ?: "Unknown Error")
+        when(val result = auth.signIn()) {
+            is AuthResult.Error -> {
+                when(result.exception) {
+                    is GoogleAuthInvalidEmailException -> context.toast("Only Aleph Email is allowed")
+                    else -> context.toast(result.message ?: "Unknown Error")
+                }
+            }
+            else -> Unit
         }
         mutableState.update { SignInScreenState.Idle }
     }
 
-    private suspend fun trySignIn(context: Context, filterByAuthorized: Boolean): AuthResult? {
-        return when(val result = auth.signIn(GoogleAuth.createOptions(filterByAuthorized))) {
-            is AuthResult.Cancelled -> null
-            is AuthResult.Error -> {
-                if (result.exception is GoogleAuthInvalidEmailException) {
-                    context.toast("Only Aleph Email is allowed")
-                    return null
-                }
-                result
-            }
-            is AuthResult.Success -> result
-        }
-    }
 }
