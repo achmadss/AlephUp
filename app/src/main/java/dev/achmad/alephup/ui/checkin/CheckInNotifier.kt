@@ -82,8 +82,8 @@ class CheckInNotifier(
 
         fun createNotificationChannelConfig() = NotificationHelper.Channel(
             id = NOTIFICATION_CHANNEL_ID,
-            name = "Background Attendance Service", // TODO copy
-            description = "Verify Wi-Fi connection in the background to attend automatically", // TODO copy
+            name = "Check-in Status", // TODO copy
+            description = "Information about the most recent attempt to check-in using Wi-Fi connection", // TODO copy
             importance = NotificationManager.IMPORTANCE_LOW,
             showBadge = false,
         )

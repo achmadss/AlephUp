@@ -64,12 +64,11 @@ class CheckIn {
 
     init {
         scope.launch {
-            wifiHelper.getWifiStateFlow()
-                .filterIsInstance<WifiState.Connected>()
-                .distinctUntilChangedBy { it.wifiInfo.ssid }
-                .collect { wifiState ->
+            wifiHelper.getWifiStateFlow().collect { wifiState ->
+                if (wifiState is WifiState.Connected) {
                     execute(wifiState.wifiInfo.ssid)
                 }
+            }
         }
     }
 
