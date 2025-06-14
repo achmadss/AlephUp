@@ -62,13 +62,15 @@ fun PreferenceScreen(
                         when (preference) {
                             // Create Preference Group
                             is Preference.PreferenceGroup -> {
-                                if (!preference.visible) return@fastForEachIndexed
-
                                 item {
                                     Column {
-                                        PreferenceGroupHeader(title = preference.title)
+                                        PreferenceGroupHeader(
+                                            title = preference.title,
+                                            visible = preference.visible
+                                        )
                                     }
                                 }
+                                if (!preference.visible) return@fastForEachIndexed
                                 items(preference.preferenceItems) { item ->
                                     PreferenceItem(
                                         item = item,

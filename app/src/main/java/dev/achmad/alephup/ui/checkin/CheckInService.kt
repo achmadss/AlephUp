@@ -8,30 +8,22 @@ import android.os.PowerManager
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import dev.achmad.alephup.R
+import dev.achmad.alephup.base.MainActivity
+import dev.achmad.alephup.ui.checkin.CheckInNotifier.Companion.NOTIFICATION_CHANNEL_ID
+import dev.achmad.core.device.notification.NotificationHelper
 import dev.achmad.core.util.extension.injectLazy
-import dev.achmad.data.checkin.CheckIn
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.launch
 
 /**
  * Foreground service that monitors Wi-Fi connections and executes tasks when connected to specific networks
  */
 class CheckInService: Service() {
 
-    private val checkIn by injectLazy<CheckIn>()
-
+    private val notificationHelper by injectLazy<NotificationHelper>()
     private var wakeLock: PowerManager.WakeLock? = null
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private lateinit var notifier: CheckInNotifier
 
     override fun onCreate() {
         super.onCreate()
-
-        // initiate notifier
-        notifier = CheckInNotifier(this)
 
         // create and acquire wake lock
         val powerManager = getSystemService(POWER_SERVICE) as PowerManager
@@ -44,16 +36,26 @@ class CheckInService: Service() {
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        // start notifying check-in results
-        serviceScope.launch {
-            checkIn.checkInResultSharedFlow.collect { result ->
-                notifier.notifyCheckInResult(result)
-            }
-        }
+
+        val serviceNotification = notificationHelper.createNotification(
+            NotificationHelper.Data(
+                channelId = NOTIFICATION_CHANNEL_ID,
+                title = getString(R.string.run_in_background_notification),
+                text = "",
+                smallIconResId = R.drawable.ic_run_in_background,
+                context = this,
+                pendingIntent = notificationHelper.createActivityPendingIntent(
+                    requestCode = 0,
+                    activityClass = MainActivity::class.java,
+                    context = this
+                ),
+                onGoing = true
+            )
+        )
 
         startForeground(
-            CheckInNotifier.SERVICE_NOTIFICATION_ID,
-            notifier.serviceNotification,
+            SERVICE_NOTIFICATION_ID,
+            serviceNotification,
         )
 
         isRunning = true
@@ -74,13 +76,13 @@ class CheckInService: Service() {
             }
         }
         wakeLock = null
-        serviceScope.cancel() // cancel coroutines
         isRunning = false
         super.onDestroy()
     }
 
     companion object {
         private const val WAKE_LOCK_TAG = "AlephUp:CheckInWakeLock"
+        private const val SERVICE_NOTIFICATION_ID = 1001
 
         var isRunning by mutableStateOf(false)
 

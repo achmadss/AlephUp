@@ -15,7 +15,6 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.achmad.alephup.R
 import dev.achmad.alephup.base.MainApplication.Companion.requiredPermissions
-import dev.achmad.alephup.base.preferences.ApplicationPreferences
 import dev.achmad.alephup.ui.checkin.CheckInService
 import dev.achmad.alephup.ui.settings.Preference
 import dev.achmad.alephup.ui.settings.PreferenceScreen
@@ -94,21 +93,18 @@ object SettingsScreen: Screen {
         val applicationContext = LocalActivity.currentOrThrow.applicationContext
         return Preference.PreferenceGroup(
             title = stringResource(R.string.background_service),
+            visible = locationPermissions.isAllPermissionsGranted() && notificationPermission.isGranted.value,
             preferenceItems = listOf(
                 Preference.PreferenceItem.BasicSwitchPreference(
                     value = CheckInService.isRunning,
                     title = stringResource(R.string.run_in_background),
                     subtitle = stringResource(R.string.run_in_background_description),
-                    enabled = locationPermissions.isAllPermissionsGranted() && notificationPermission.isGranted.value,
                     onValueChanged = { newValue ->
                         if (newValue) CheckInService.startService(applicationContext)
                         else CheckInService.stopService(applicationContext)
                         true
                     }
                 ),
-                Preference.PreferenceItem.InfoPreference(
-                    title = stringResource(R.string.allow_required_permission_to_enable_background_service)
-                )
             )
         )
     }
@@ -149,7 +145,7 @@ object SettingsScreen: Screen {
                         )
                     ),
                     dialogTitle = "Sign out", // TODO copy
-                    dialogText = "After sign out, the app will stop running in the background.",
+                    dialogText = "After you are signed out, the app will stop running in the background.",
                     onConfirm = {
                         scope.launch {
                             onClickSignOut()

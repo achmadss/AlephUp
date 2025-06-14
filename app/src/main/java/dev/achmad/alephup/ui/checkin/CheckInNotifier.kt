@@ -6,27 +6,20 @@ import dev.achmad.alephup.R
 import dev.achmad.alephup.base.MainActivity
 import dev.achmad.core.device.notification.NotificationHelper
 import dev.achmad.core.util.extension.injectLazy
+import dev.achmad.data.checkin.CheckIn
 import dev.achmad.data.checkin.CheckInResult
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 class CheckInNotifier(
     context: Context,
 ) {
     private val notificationHelper by injectLazy<NotificationHelper>()
-    val serviceNotification = notificationHelper.createNotification(
-        NotificationHelper.Data(
-            channelId = NOTIFICATION_CHANNEL_ID,
-            title = context.getString(R.string.run_in_background_notification),
-            text = "",
-            smallIconResId = R.drawable.ic_run_in_background,
-            context = context,
-            pendingIntent = notificationHelper.createActivityPendingIntent(
-                requestCode = 0,
-                activityClass = MainActivity::class.java,
-                context = context
-            ),
-            onGoing = true
-        )
-    )
+    private val checkIn by injectLazy<CheckIn>()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     private val checkInResultNotificationData = NotificationHelper.Data(
         channelId = NOTIFICATION_CHANNEL_ID,
         title = context.getString(R.string.check_in_success),
@@ -41,7 +34,15 @@ class CheckInNotifier(
         onGoing = true
     )
 
-    fun notifyCheckInResult(result: CheckInResult) {
+    init {
+        scope.launch {
+            checkIn.checkInResultSharedFlow.collect { result ->
+                notifyCheckInResult(result)
+            }
+        }
+    }
+
+    private fun notifyCheckInResult(result: CheckInResult) {
         when(result) {
             CheckInResult.Success -> {
                 notificationHelper.notify(
@@ -77,7 +78,6 @@ class CheckInNotifier(
 
     companion object {
         const val NOTIFICATION_CHANNEL_ID = "check_in_channel"
-        const val SERVICE_NOTIFICATION_ID = 1001
         const val CHECK_IN_NOTIFICATION_ID = 1002
 
         fun createNotificationChannelConfig() = NotificationHelper.Channel(
