@@ -16,7 +16,7 @@ object Constants {
             val BSSID_TARGETS = listOf(
                 "8a:c4:34:5d:1e:79"
             )
-            const val SSID_TARGET = "Aleph"
+            const val SSID_TARGET = "Susilo"
         }
 
     }

@@ -34,7 +34,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
@@ -46,16 +46,16 @@ import dev.achmad.core.util.extension.injectLazy
 import dev.achmad.data.checkin.CheckInPreference
 import dev.achmad.data.checkin.CheckInResult
 
-object CheckInScreen: Screen {
-
-    private fun readResolve(): Any = CheckInScreen
+data class CheckInScreen(
+    val shouldCheckIn: Boolean = false,
+): Screen {
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val viewModel = viewModel<CheckInScreenViewModel>()
-        val state by viewModel.state.collectAsState()
+        val screenModel = rememberScreenModel { CheckInScreenModel(shouldCheckIn) }
+        val state by screenModel.state.collectAsState()
         val checkInPreference by remember { injectLazy<CheckInPreference>() }
 
         Scaffold(
@@ -117,7 +117,7 @@ object CheckInScreen: Screen {
                     text = stringResource(
                         id = R.string.greet,
                         formatArgs = arrayOf(
-                            viewModel.getCurrentUser()?.name ?: "Unknown User"
+                            screenModel.getCurrentUser()?.name ?: "Unknown User"
                         )
                     ),
                     style = MaterialTheme.typography.titleLarge
@@ -151,10 +151,10 @@ object CheckInScreen: Screen {
                     else -> {
                         Text(
                             text = when(state.result) {
-                                CheckInResult.Loading, CheckInResult.Success -> ""
                                 CheckInResult.HttpError -> "Failed to connect to server" // TODO copy
-                                CheckInResult.InvalidSSID -> "Not Aleph Wifi" // TODO copy
+                                CheckInResult.InvalidSSID -> "Not connected to an Aleph Wifi" // TODO copy
                                 null -> "Please connect to Aleph Wifi" // TODO copy
+                                else -> ""
                             },
                         )
                     }
@@ -164,7 +164,7 @@ object CheckInScreen: Screen {
                     CheckInResult.InvalidSSID -> {
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
-                            onClick = { viewModel.retryPostAttendance() }
+                            onClick = { screenModel.retryCheckIn() }
                         ) {
                             Text("Try again") // TODO copy
                         }

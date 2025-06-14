@@ -25,7 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
 import dev.achmad.alephup.R
 
@@ -35,8 +35,9 @@ object SignInScreen: Screen {
     @Composable
     override fun Content() {
         val context = LocalContext.current
-        val viewModel = viewModel<SignInScreenViewModel>()
-        val loading by viewModel.loading.collectAsState()
+        val screenModel = rememberScreenModel { SignInScreenModel() }
+        val state by screenModel.state.collectAsState()
+        val loading = state is SignInScreenState.Loading
 
         Column(
             modifier = Modifier
@@ -66,7 +67,7 @@ object SignInScreen: Screen {
                 enabled = !loading,
                 onClick = {
                     if (!loading) {
-                        viewModel.signIn(context)
+                        screenModel.signIn(context)
                     }
                 }
             ) {

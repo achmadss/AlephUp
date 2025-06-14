@@ -45,7 +45,8 @@ class WifiHelper(private val context: Context) {
      * This is updated by the internal monitoring logic and can be observed directly,
      * though [getWifiStateFlow] is recommended for event-driven updates.
      */
-    val currentWifiInfo: StateFlow<WifiConnectionInfo> = _currentWifiInfo
+    val currentWifiInfoState: StateFlow<WifiConnectionInfo> = _currentWifiInfo
+    val currentWifiInfo get() = currentWifiInfoState.value
 
     /**
      * Queries system services to get current Wi-Fi details and updates `_currentWifiInfo`.

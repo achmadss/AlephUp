@@ -80,6 +80,7 @@ dependencies {
     implementation(libs.voyager.navigator)
     implementation(libs.voyager.tabNavigator)
     implementation(libs.voyager.transitions)
+    implementation(libs.voyager.screenmodel)
 
     implementation(libs.androidx.work.runtime.ktx)
 }

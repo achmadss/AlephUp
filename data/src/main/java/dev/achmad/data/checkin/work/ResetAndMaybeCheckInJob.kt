@@ -9,6 +9,7 @@ import androidx.work.WorkerParameters
 import dev.achmad.core.device.wifi.WifiHelper
 import dev.achmad.core.util.extension.injectLazy
 import dev.achmad.core.util.extension.workManager
+import dev.achmad.data.auth.Auth
 import dev.achmad.data.checkin.CheckIn
 import java.time.Duration
 import java.time.LocalDateTime
@@ -20,12 +21,13 @@ class ResetAndMaybeCheckInJob(
 ): CoroutineWorker(context, workerParams) {
 
     private val checkIn by injectLazy<CheckIn>()
+    private val auth by injectLazy<Auth>()
     private val wifiHelper by injectLazy<WifiHelper>()
 
     override suspend fun doWork(): Result {
-        val wifiInfo = wifiHelper.currentWifiInfo.value
-        if (wifiInfo.connected) {
-            checkIn.execute(wifiInfo.ssid)
+        val wifiInfo = wifiHelper.currentWifiInfo
+        if (wifiInfo.connected && auth.isSignedIn()) {
+            checkIn.execute()
         }
         return Result.success()
     }

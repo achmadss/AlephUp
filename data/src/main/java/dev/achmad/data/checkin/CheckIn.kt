@@ -7,6 +7,7 @@ import dev.achmad.core.network.GET
 import dev.achmad.core.network.NetworkHelper
 import dev.achmad.core.network.await
 import dev.achmad.core.util.extension.injectLazy
+import dev.achmad.data.auth.Auth
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -15,9 +16,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
@@ -28,6 +27,7 @@ import java.time.LocalDate
 sealed interface CheckInResult {
     data object Loading : CheckInResult
     data object Success : CheckInResult
+    data object AlreadyCheckedInToday : CheckInResult
     data object InvalidSSID : CheckInResult
     data object HttpError : CheckInResult
 }
@@ -38,6 +38,7 @@ class CheckIn {
     private val wifiHelper by injectLazy<WifiHelper>()
     private val networkHelper by injectLazy<NetworkHelper>()
     private val checkInPreference by injectLazy<CheckInPreference>()
+    private val auth by injectLazy<Auth>()
 
     // source of truth
     private val _checkInResult = MutableSharedFlow<CheckInResult>(
@@ -65,16 +66,16 @@ class CheckIn {
     init {
         scope.launch {
             wifiHelper.getWifiStateFlow().collect { wifiState ->
-                if (wifiState is WifiState.Connected) {
-                    execute(wifiState.wifiInfo.ssid)
+                if (wifiState is WifiState.Connected && auth.isSignedIn()) {
+                    execute()
                 }
             }
         }
     }
 
-    fun execute(ssid: String) {
+    fun execute() {
         scope.launch {
-            executeFlow(ssid).collect { result ->
+            executeFlow(wifiHelper.currentWifiInfo.ssid).collect { result ->
                 _checkInResult.emit(result)
             }
         }
@@ -94,7 +95,7 @@ class CheckIn {
 
         // check if already checked in today
         if (checkInPreference.checkedInToday()) {
-            emit(CheckInResult.Success)
+            emit(CheckInResult.AlreadyCheckedInToday)
             return@flow
         }
 

@@ -6,6 +6,8 @@ import dev.achmad.alephup.R
 import dev.achmad.alephup.base.MainActivity
 import dev.achmad.core.device.notification.NotificationHelper
 import dev.achmad.core.util.extension.injectLazy
+import dev.achmad.data.auth.Auth
+import dev.achmad.data.auth.AuthState
 import dev.achmad.data.checkin.CheckIn
 import dev.achmad.data.checkin.CheckInResult
 import kotlinx.coroutines.CoroutineScope
@@ -18,6 +20,7 @@ class CheckInNotifier(
 ) {
     private val notificationHelper by injectLazy<NotificationHelper>()
     private val checkIn by injectLazy<CheckIn>()
+    private val auth by injectLazy<Auth>()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val checkInResultNotificationData = NotificationHelper.Data(
@@ -38,6 +41,13 @@ class CheckInNotifier(
         scope.launch {
             checkIn.checkInResultSharedFlow.collect { result ->
                 notifyCheckInResult(result)
+            }
+        }
+        scope.launch {
+            auth.authState.collect { authState ->
+                if (authState is AuthState.SignedOut) {
+                    notificationHelper.cancel(CHECK_IN_NOTIFICATION_ID)
+                }
             }
         }
     }

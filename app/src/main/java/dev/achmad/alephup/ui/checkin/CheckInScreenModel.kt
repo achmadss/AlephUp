@@ -1,37 +1,32 @@
 package dev.achmad.alephup.ui.checkin
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import cafe.adriel.voyager.core.model.StateScreenModel
+import cafe.adriel.voyager.core.model.screenModelScope
 import dev.achmad.core.device.wifi.WifiHelper
 import dev.achmad.core.device.wifi.WifiState
 import dev.achmad.core.util.extension.inject
 import dev.achmad.data.auth.Auth
 import dev.achmad.data.checkin.CheckIn
-import dev.achmad.data.checkin.CheckInPreference
 import dev.achmad.data.checkin.CheckInResult
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class CheckInScreenViewModel(
+class CheckInScreenModel(
+    shouldCheckIn: Boolean = false,
     private val wifiHelper: WifiHelper = inject(),
     private val checkIn: CheckIn = inject(),
-    private val checkInPreference: CheckInPreference = inject(),
     private val auth: Auth = inject(),
-): ViewModel() {
-
-    private val mutableState = MutableStateFlow(CheckInScreenState())
-    val state = mutableState.asStateFlow()
+): StateScreenModel<CheckInScreenState>(CheckInScreenState()) {
 
     init {
         observeWifiChanges()
-        observePostAttendanceResult()
+        observeCheckInResult()
+        if (shouldCheckIn) retryCheckIn()
     }
 
     fun getCurrentUser() = auth.getCurrentUser()
 
-    private fun observeWifiChanges() = viewModelScope.launch {
+    private fun observeWifiChanges() = screenModelScope.launch {
         wifiHelper.getWifiStateFlow().collect { wifiState ->
             when(wifiState) {
                 is WifiState.Init -> mutableState.update { CheckInScreenState() }
@@ -57,7 +52,7 @@ class CheckInScreenViewModel(
         }
     }
 
-    private fun observePostAttendanceResult() = viewModelScope.launch {
+    private fun observeCheckInResult() = screenModelScope.launch {
         checkIn.checkInResultStateFlow.collect { result ->
             val loading = result is CheckInResult.Loading
             mutableState.update {
@@ -69,10 +64,8 @@ class CheckInScreenViewModel(
         }
     }
 
-    fun retryPostAttendance() {
-        if (checkInPreference.checkedInToday()) return
-        val wifiInfo = state.value.wifiConnectionInfo ?: return
-        checkIn.execute(wifiInfo.ssid)
+    fun retryCheckIn() {
+        checkIn.execute()
     }
 
 }

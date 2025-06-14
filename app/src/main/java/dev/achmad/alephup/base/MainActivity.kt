@@ -21,6 +21,7 @@ import dev.achmad.alephup.util.arePermissionsAllowed
 import dev.achmad.core.util.extension.injectLazy
 import dev.achmad.data.auth.Auth
 import dev.achmad.data.auth.AuthState
+import dev.achmad.data.checkin.CheckInPreference
 import soup.compose.material.motion.animation.materialSharedAxisX
 import soup.compose.material.motion.animation.rememberSlideDistance
 
@@ -35,13 +36,14 @@ class MainActivity : ComponentActivity() {
             AlephUpTheme {
                 val slideDistance = rememberSlideDistance()
                 val auth by remember { injectLazy<Auth>() }
+                val checkInPreference by remember { injectLazy<CheckInPreference>() }
                 val authState = auth.authState.collectAsState().value
 
                 Navigator(
                     screen = when {
                         !arePermissionsAllowed(requiredPermissions) -> OnBoardingScreen
                         authState is AuthState.SignedOut -> SignInScreen
-                        else -> CheckInScreen
+                        else -> CheckInScreen()
                     },
                     disposeBehavior = NavigatorDisposeBehavior(
                         disposeNestedNavigators = false,
@@ -63,7 +65,7 @@ class MainActivity : ComponentActivity() {
                                     is SignInScreen -> {
                                         if (authState is AuthState.SignedIn) {
                                             navigator.popUntilRoot()
-                                            navigator.replace(CheckInScreen)
+                                            navigator.replace(CheckInScreen(shouldCheckIn = true))
                                         }
                                     }
                                     else -> {
@@ -71,6 +73,7 @@ class MainActivity : ComponentActivity() {
                                             navigator.popUntilRoot()
                                             navigator.replace(SignInScreen)
                                             CheckInService.stopService(applicationContext)
+                                            checkInPreference.lastCheckedIn().delete()
                                         }
                                     }
                                 }
