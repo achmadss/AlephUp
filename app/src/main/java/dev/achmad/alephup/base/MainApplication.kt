@@ -5,8 +5,9 @@ import android.app.Application
 import android.os.Build
 import android.util.Log
 import dev.achmad.alephup.base.preferences.ApplicationPreferences
-import dev.achmad.alephup.base.service.AttendanceService
+import dev.achmad.alephup.ui.checkin.CheckInService
 import dev.achmad.alephup.di.appModule
+import dev.achmad.alephup.ui.checkin.CheckInNotifier
 import dev.achmad.alephup.util.arePermissionsAllowed
 import dev.achmad.core.device.notification.NotificationHelper
 import dev.achmad.core.di.coreModule
@@ -73,7 +74,7 @@ class MainApplication: Application() {
         val notificationHelper by injectLazy<NotificationHelper>()
         notificationHelper.createNotificationChannels(
             listOf(
-                AttendanceService.createNotificationChannelConfig()
+                CheckInNotifier.createNotificationChannelConfig()
                 // add more if needed
             )
         )

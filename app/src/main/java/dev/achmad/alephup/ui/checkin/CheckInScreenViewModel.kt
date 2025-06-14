@@ -1,25 +1,25 @@
-package dev.achmad.alephup.ui.home
+package dev.achmad.alephup.ui.checkin
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.achmad.core.device.wifi.WifiHelper
 import dev.achmad.core.device.wifi.WifiState
 import dev.achmad.core.util.extension.inject
-import dev.achmad.data.attendance.AttendancePreference
-import dev.achmad.data.attendance.PostAttendance
-import dev.achmad.data.attendance.PostAttendanceResult
+import dev.achmad.data.checkin.CheckInPreference
+import dev.achmad.data.checkin.CheckIn
+import dev.achmad.data.checkin.CheckInResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class HomeScreenViewModel(
+class CheckInScreenViewModel(
     private val wifiHelper: WifiHelper = inject(),
-    private val postAttendance: PostAttendance = inject(),
-    private val attendancePreference: AttendancePreference = inject()
+    private val checkIn: CheckIn = inject(),
+    private val checkInPreference: CheckInPreference = inject()
 ): ViewModel() {
 
-    private val mutableState = MutableStateFlow(HomeScreenState())
+    private val mutableState = MutableStateFlow(CheckInScreenState())
     val state = mutableState.asStateFlow()
 
     init {
@@ -30,7 +30,7 @@ class HomeScreenViewModel(
     private fun observeWifiChanges() = viewModelScope.launch {
         wifiHelper.getWifiStateFlow().collect { wifiState ->
             when(wifiState) {
-                is WifiState.Init -> mutableState.update { HomeScreenState() }
+                is WifiState.Init -> mutableState.update { CheckInScreenState() }
                 is WifiState.Disconnected -> mutableState.update {
                     it.copy(
                         wifiConnectionInfo = null,
@@ -54,8 +54,8 @@ class HomeScreenViewModel(
     }
 
     private fun observePostAttendanceResult() = viewModelScope.launch {
-        postAttendance.result.collect { result ->
-            val loading = result is PostAttendanceResult.Loading
+        checkIn.checkInResultStateFlow.collect { result ->
+            val loading = result is CheckInResult.Loading
             mutableState.update {
                 it.copy(
                     result = result,
@@ -66,9 +66,9 @@ class HomeScreenViewModel(
     }
 
     fun retryPostAttendance() {
-        if (attendancePreference.attended()) return
+        if (checkInPreference.checkedInToday()) return
         val wifiInfo = state.value.wifiConnectionInfo ?: return
-        postAttendance.execute(wifiInfo.ssid)
+        checkIn.execute(wifiInfo.ssid)
     }
 
 }

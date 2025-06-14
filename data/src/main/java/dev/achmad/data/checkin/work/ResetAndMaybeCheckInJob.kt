@@ -1,4 +1,4 @@
-package dev.achmad.data.attendance.work
+package dev.achmad.data.checkin.work
 
 import android.content.Context
 import androidx.work.CoroutineWorker
@@ -9,34 +9,34 @@ import androidx.work.WorkerParameters
 import dev.achmad.core.device.wifi.WifiHelper
 import dev.achmad.core.util.extension.injectLazy
 import dev.achmad.core.util.extension.workManager
-import dev.achmad.data.attendance.PostAttendance
+import dev.achmad.data.checkin.CheckIn
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
-class ResetAndMaybePostAttendanceJob(
+class ResetAndMaybeCheckInJob(
     context: Context,
     workerParams: WorkerParameters
 ): CoroutineWorker(context, workerParams) {
 
-    private val postAttendance by injectLazy<PostAttendance>()
+    private val checkIn by injectLazy<CheckIn>()
     private val wifiHelper by injectLazy<WifiHelper>()
 
     override suspend fun doWork(): Result {
         val wifiInfo = wifiHelper.currentWifiInfo.value
         if (wifiInfo.connected) {
-            postAttendance.execute(wifiInfo.ssid)
+            checkIn.execute(wifiInfo.ssid)
         }
         return Result.success()
     }
 
     companion object {
 
-        private const val RESET_ATTENDANCE_JOB = "RESET_ATTENDANCE_JOB"
+        private const val RESET_CHECKED_IN_JOB = "RESET_CHECKED_IN_JOB"
 
         fun scheduleNow(context: Context) {
             val workManager = context.workManager
-            workManager.cancelAllWorkByTag(RESET_ATTENDANCE_JOB)
+            workManager.cancelAllWorkByTag(RESET_CHECKED_IN_JOB)
 
             val now = LocalDateTime.now()
             val targetTime = now.toLocalDate()
@@ -48,18 +48,18 @@ class ResetAndMaybePostAttendanceJob(
             }
             val delayMinutes = Duration.between(now, firstRun).toMinutes()
 
-            val workRequest = PeriodicWorkRequestBuilder<ResetAndMaybePostAttendanceJob>(
+            val workRequest = PeriodicWorkRequestBuilder<ResetAndMaybeCheckInJob>(
                 repeatInterval = 24,
                 repeatIntervalTimeUnit = TimeUnit.HOURS,
                 flexTimeInterval = PeriodicWorkRequest.MIN_PERIODIC_FLEX_MILLIS,
                 flexTimeIntervalUnit = TimeUnit.MILLISECONDS
             )
                 .setInitialDelay(delayMinutes, TimeUnit.MINUTES)
-                .addTag(RESET_ATTENDANCE_JOB)
+                .addTag(RESET_CHECKED_IN_JOB)
                 .build()
 
             workManager.enqueueUniquePeriodicWork(
-                RESET_ATTENDANCE_JOB,
+                RESET_CHECKED_IN_JOB,
                 ExistingPeriodicWorkPolicy.UPDATE,
                 workRequest
             )

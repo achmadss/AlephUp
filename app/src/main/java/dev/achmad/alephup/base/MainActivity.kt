@@ -9,8 +9,8 @@ import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
 import cafe.adriel.voyager.transitions.ScreenTransition
 import dev.achmad.alephup.base.MainApplication.Companion.requiredPermissions
-import dev.achmad.alephup.ui.auth.LoginScreen
-import dev.achmad.alephup.ui.home.HomeScreen
+import dev.achmad.alephup.ui.auth.SignInScreen
+import dev.achmad.alephup.ui.checkin.CheckInScreen
 import dev.achmad.alephup.ui.onboarding.OnBoardingScreen
 import dev.achmad.alephup.ui.theme.AlephUpTheme
 import dev.achmad.alephup.util.arePermissionsAllowed
@@ -32,8 +32,8 @@ class MainActivity : ComponentActivity() {
                 Navigator(
                     screen = when {
                         !arePermissionsAllowed(requiredPermissions) -> OnBoardingScreen
-                        user == null -> LoginScreen
-                        else -> HomeScreen
+                        user == null -> SignInScreen
+                        else -> CheckInScreen
                     },
                     disposeBehavior = NavigatorDisposeBehavior(
                         disposeNestedNavigators = false,

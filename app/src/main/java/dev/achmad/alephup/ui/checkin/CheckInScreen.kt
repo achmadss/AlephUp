@@ -1,4 +1,4 @@
-package dev.achmad.alephup.ui.home
+package dev.achmad.alephup.ui.checkin
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -44,20 +44,20 @@ import dev.achmad.alephup.ui.components.AppBarActions
 import dev.achmad.alephup.ui.settings.screens.SettingsScreen
 import dev.achmad.alephup.util.extension.rememberFirebaseUser
 import dev.achmad.core.util.extension.injectLazy
-import dev.achmad.data.attendance.AttendancePreference
-import dev.achmad.data.attendance.PostAttendanceResult
+import dev.achmad.data.checkin.CheckInPreference
+import dev.achmad.data.checkin.CheckInResult
 
-object HomeScreen: Screen {
+object CheckInScreen: Screen {
 
-    private fun readResolve(): Any = HomeScreen
+    private fun readResolve(): Any = CheckInScreen
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
-        val viewModel = viewModel<HomeScreenViewModel>()
+        val viewModel = viewModel<CheckInScreenViewModel>()
         val state by viewModel.state.collectAsState()
-        val attendancePreference by remember { injectLazy<AttendancePreference>() }
+        val checkInPreference by remember { injectLazy<CheckInPreference>() }
         val user = rememberFirebaseUser()
 
         Scaffold(
@@ -132,7 +132,7 @@ object HomeScreen: Screen {
                     modifier = Modifier
                         .size(72.dp),
                     imageVector = when {
-                        attendancePreference.attended() -> Icons.Outlined.AssignmentTurnedIn
+                        checkInPreference.checkedInToday() -> Icons.Outlined.AssignmentTurnedIn
                         else -> Icons.Outlined.AssignmentLate
                     },
                     contentDescription = null,
@@ -140,30 +140,30 @@ object HomeScreen: Screen {
                 )
                 Spacer(modifier = Modifier.height(32.dp))
                 when {
-                    attendancePreference.attended() -> {
+                    checkInPreference.checkedInToday() -> {
                         Text(
-                            text = stringResource(R.string.post_attendance_success),
+                            text = stringResource(R.string.check_in_success),
                         )
                     }
                     else -> {
                         Text(
                             text = when(state.result) {
-                                PostAttendanceResult.Loading, PostAttendanceResult.Success -> ""
-                                PostAttendanceResult.HttpError -> "Failed to connect to server"
-                                PostAttendanceResult.InvalidSSID -> "Not Aleph Wifi"
-                                null -> "Please connect to Aleph Wifi"
+                                CheckInResult.Loading, CheckInResult.Success -> ""
+                                CheckInResult.HttpError -> "Failed to connect to server" // TODO copy
+                                CheckInResult.InvalidSSID -> "Not Aleph Wifi" // TODO copy
+                                null -> "Please connect to Aleph Wifi" // TODO copy
                             },
                         )
                     }
                 }
                 when(state.result) {
-                    PostAttendanceResult.HttpError,
-                    PostAttendanceResult.InvalidSSID -> {
+                    CheckInResult.HttpError,
+                    CheckInResult.InvalidSSID -> {
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
                             onClick = { viewModel.retryPostAttendance() }
                         ) {
-                            Text("Try again")
+                            Text("Try again") // TODO copy
                         }
                     }
                     else -> Unit

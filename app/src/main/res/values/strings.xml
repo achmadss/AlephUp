@@ -14,7 +14,7 @@
 
     <string name="connected_to">Wifi connected: %s</string>
     <string name="not_connected">Wifi not connected</string>
-    <string name="enable_optional_settings">To ensure consistent automatic attendance, you can enable optional settings above. </string>
+    <string name="enable_optional_settings">To ensure consistent automatic check-in, you can enable optional settings above. </string>
 
     <string name="allow_required_permission_to_enable_background_service">The app cannot run in background (including on device boot) if required permissions are not granted.</string>
 
@@ -24,16 +24,16 @@
     <string name="open_battery_optimization_settings">Open Battery Optimization Settings</string>
 
     <string name="background_service">Background</string>
-    <string name="allow_location_permission_all_the_time">Allow location permission all the time</string>
-    <string name="required_for_wifi_monitoring">Required to accurately verify attendance using Wi-Fi in the background</string>
+    <string name="allow_location_permission_all_the_time">Allow location permission</string>
+    <string name="required_for_wifi_monitoring">Required to accurately verify attendance using Wi-Fi</string>
 
     <string name="permission_group_title">Permission</string>
 
-    <string name="post_attendance_success">You have checked-in for today</string>
+    <string name="check_in_success">You have checked-in for today</string>
     <string name="run_in_background_notification">AlephUp is now running in the background</string>
 
     <string name="allow_notifications">Allow notifications</string>
-    <string name="required_for_background_notification">Required by Android to inform you that this app is running in the background</string>
+    <string name="required_for_background_notification">Required by Android if you want this app to run in the background</string>
 
     <string name="start_service_on_boot">Run in background on device boot</string>
     <string name="start_service_on_boot_description">Automatically starts the app in background when your device turns on</string>
@@ -41,6 +41,7 @@
     <string name="enable_background_service">Enable Background Service</string>
     <string name="disable_background_service">Disable Background Service</string>
     <string name="run_in_background">Run in background</string>
+    <string name="run_in_background_description">The app will run in the background and automatically try to check-in</string>
 
     <string name="account">Account</string>
     <string name="sign_out">Sign out</string>

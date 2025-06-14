@@ -16,8 +16,8 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.achmad.alephup.R
 import dev.achmad.alephup.base.MainApplication.Companion.requiredPermissions
 import dev.achmad.alephup.base.preferences.ApplicationPreferences
-import dev.achmad.alephup.base.service.AttendanceService
-import dev.achmad.alephup.ui.auth.LoginScreen
+import dev.achmad.alephup.ui.checkin.CheckInService
+import dev.achmad.alephup.ui.auth.SignInScreen
 import dev.achmad.alephup.ui.settings.Preference
 import dev.achmad.alephup.ui.settings.PreferenceScreen
 import dev.achmad.alephup.util.MultiplePermissionsState
@@ -61,9 +61,7 @@ object SettingsScreen: Screen {
                     ),
                     getBatteryOptimizationGroup(),
                     getAccountGroup(
-                        onSignOut = {
-                            loading = true
-                        }
+                        onSignOut = { loading = true }
                     ),
                 )
             },
@@ -103,21 +101,23 @@ object SettingsScreen: Screen {
             title = stringResource(R.string.background_service),
             preferenceItems = listOf(
                 Preference.PreferenceItem.BasicSwitchPreference(
-                    value = AttendanceService.isRunning,
+                    value = CheckInService.isRunning,
                     title = stringResource(R.string.run_in_background),
+                    subtitle = stringResource(R.string.run_in_background_description),
                     enabled = locationPermissions.isAllPermissionsGranted() && notificationPermission.isGranted.value,
                     onValueChanged = { newValue ->
-                        if (newValue) AttendanceService.startService(applicationContext)
-                        else AttendanceService.stopService(applicationContext)
+                        if (newValue) CheckInService.startService(applicationContext)
+                        else CheckInService.stopService(applicationContext)
                         true
                     }
                 ),
-                Preference.PreferenceItem.SwitchPreference(
-                    preference = applicationPreferences.runInBackgroundOnBoot(),
-                    title = stringResource(R.string.start_service_on_boot),
-                    subtitle = stringResource(R.string.start_service_on_boot_description),
-                    enabled = locationPermissions.isAllPermissionsGranted() && notificationPermission.isGranted.value,
-                ),
+                // hide run on boot because this needs location permission all the time
+//                Preference.PreferenceItem.SwitchPreference(
+//                    preference = applicationPreferences.runInBackgroundOnBoot(),
+//                    title = stringResource(R.string.start_service_on_boot),
+//                    subtitle = stringResource(R.string.start_service_on_boot_description),
+//                    enabled = locationPermissions.isAllPermissionsGranted() && notificationPermission.isGranted.value,
+//                ),
                 Preference.PreferenceItem.InfoPreference(
                     title = stringResource(R.string.allow_required_permission_to_enable_background_service)
                 )
@@ -157,16 +157,16 @@ object SettingsScreen: Screen {
                     titleColor = Color.Red,
                     subtitle = stringResource(
                         id = R.string.signed_in_as,
-                        user?.displayName ?: "Unknown Username",
-                        user?.email ?: "Unknown Email"
+                        user?.displayName ?: "Unknown Username", // TODO copy
+                        user?.email ?: "Unknown Email", // TODO copy
                     ),
                     onClick = {
                         scope.launch {
                             onSignOut()
-                            AttendanceService.stopService(context)
+                            CheckInService.stopService(context)
                             googleAuth.signOut()
                             navigator.popUntilRoot()
-                            navigator.replace(LoginScreen)
+                            navigator.replace(SignInScreen)
                         }
                     }
                 )

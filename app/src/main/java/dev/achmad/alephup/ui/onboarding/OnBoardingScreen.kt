@@ -30,7 +30,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.achmad.alephup.R
 import dev.achmad.alephup.base.MainApplication.Companion.requiredPermissions
-import dev.achmad.alephup.ui.auth.LoginScreen
+import dev.achmad.alephup.ui.auth.SignInScreen
 import dev.achmad.alephup.ui.components.CardSection
 import dev.achmad.alephup.ui.components.CardSectionItem
 import dev.achmad.alephup.util.rememberMultiplePermissionsState
@@ -106,7 +106,7 @@ object OnBoardingScreen: Screen {
                     modifier = Modifier.align(Alignment.End),
                     enabled = permissions.isAllPermissionsGranted(),
                     onClick = {
-                        navigator.replace(LoginScreen)
+                        navigator.replace(SignInScreen)
                     },
                     contentPadding = PaddingValues(
                         start = 64.dp,

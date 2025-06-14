@@ -1,4 +1,4 @@
-package dev.achmad.data.attendance
+package dev.achmad.data.checkin
 
 import dev.achmad.core.BASE_URL
 import dev.achmad.core.SSID_TARGET
@@ -23,29 +23,28 @@ import kotlinx.coroutines.launch
 import okio.IOException
 import java.time.LocalDate
 
-sealed interface PostAttendanceResult {
-    data object Loading: PostAttendanceResult
-    data object Success: PostAttendanceResult
-    data object InvalidSSID: PostAttendanceResult
-    data object HttpError: PostAttendanceResult
+sealed interface CheckInResult {
+    data object Loading: CheckInResult
+    data object Success: CheckInResult
+    data object InvalidSSID: CheckInResult
+    data object HttpError: CheckInResult
 }
 
-class PostAttendance {
+class CheckIn {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val channel = Channel<String>(capacity = Channel.UNLIMITED)
 
     private val wifiHelper by injectLazy<WifiHelper>()
     private val networkHelper by injectLazy<NetworkHelper>()
-    private val attendancePreference by injectLazy<AttendancePreference>()
+    private val checkInPreference by injectLazy<CheckInPreference>()
 
-    private val mutableResult = MutableStateFlow<PostAttendanceResult>(PostAttendanceResult.Loading)
-    val result = mutableResult.asStateFlow()
+    private val _checkInResultStateFlow = MutableStateFlow<CheckInResult>(CheckInResult.Loading)
+    val checkInResultStateFlow = _checkInResultStateFlow.asStateFlow()
 
-    private val mutableResultEvents = MutableSharedFlow<PostAttendanceResult>(replay = 0)
-    val resultEvents = mutableResultEvents.asSharedFlow()
+    private val _checkInResultSharedFlow = MutableSharedFlow<CheckInResult>(replay = 0)
+    val checkInResultSharedFlow = _checkInResultSharedFlow.asSharedFlow()
 
     init {
-        // Collect Wi-Fi changes
         scope.launch {
             wifiHelper.getWifiStateFlow().collect { wifiState ->
                 if (wifiState is WifiState.Connected) {
@@ -53,13 +52,11 @@ class PostAttendance {
                 }
             }
         }
-
-        // Collect retry requests (both from Wi-Fi and manual retry)
         scope.launch {
             for (ssid in channel) {
                 executeFlow(ssid).collect { result ->
-                    mutableResult.value = result
-                    mutableResultEvents.emit(result)
+                    _checkInResultStateFlow.value = result
+                    _checkInResultSharedFlow.emit(result)
                 }
             }
         }
@@ -69,36 +66,36 @@ class PostAttendance {
         channel.trySend(ssid)
     }
 
-    private fun executeFlow(ssid: String): Flow<PostAttendanceResult> = flow {
-        emit(PostAttendanceResult.Loading)
+    private fun executeFlow(ssid: String): Flow<CheckInResult> = flow {
+        emit(CheckInResult.Loading)
         delay(500)
 
         if (ssid != SSID_TARGET) {
-            emit(PostAttendanceResult.InvalidSSID)
+            emit(CheckInResult.InvalidSSID)
             return@flow
         }
 
-        val lastAttendancePreference = attendancePreference.lastAttendance()
-        val attended = attendancePreference.attended()
+        val lastCheckedInPreference = checkInPreference.lastCheckedIn()
+        val checkedInToday = checkInPreference.checkedInToday()
 
-        if (!attended) {
+        if (!checkedInToday) {
             try {
                 val response = networkHelper.client.newCall(
                     GET(BASE_URL.plus("?ssid=$ssid"))
                 ).await()
 
                 if (!response.isSuccessful) {
-                    emit(PostAttendanceResult.HttpError)
+                    emit(CheckInResult.HttpError)
                     return@flow
                 }
 
-                lastAttendancePreference.set(LocalDate.now())
+                lastCheckedInPreference.set(LocalDate.now())
             } catch (e: IOException) {
-                emit(PostAttendanceResult.HttpError)
+                emit(CheckInResult.HttpError)
                 return@flow
             }
         }
 
-        emit(PostAttendanceResult.Success)
+        emit(CheckInResult.Success)
     }
 }

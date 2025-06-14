@@ -33,15 +33,15 @@ import cafe.adriel.voyager.core.screen.Screen
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.achmad.alephup.R
-import dev.achmad.alephup.ui.home.HomeScreen
+import dev.achmad.alephup.ui.checkin.CheckInScreen
 import dev.achmad.alephup.util.extension.rememberFirebaseUser
 import dev.achmad.alephup.util.toast
 import dev.achmad.core.util.extension.injectLazy
 import dev.achmad.data.auth.GoogleAuth
 import kotlinx.coroutines.launch
 
-object LoginScreen: Screen {
-    private fun readResolve(): Any = LoginScreen
+object SignInScreen: Screen {
+    private fun readResolve(): Any = SignInScreen
 
     @Composable
     override fun Content() {
@@ -56,7 +56,7 @@ object LoginScreen: Screen {
         LaunchedEffect(user) {
             if (user != null && validEmail) {
                 navigator.popUntilRoot()
-                navigator.replace(HomeScreen)
+                navigator.replace(CheckInScreen)
                 return@LaunchedEffect
             }
         }
@@ -78,7 +78,7 @@ object LoginScreen: Screen {
             Spacer(modifier = Modifier.height(32.dp))
             Text(
                 modifier = Modifier,
-                text = "Sign-in to AlephUp",
+                text = "Sign-in to AlephUp", // TODO copy
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -99,7 +99,7 @@ object LoginScreen: Screen {
                                 onInvalidEmail = {
                                     validEmail = false
                                     googleAuth.signOut()
-                                    context.toast("Only Aleph Email is allowed")
+                                    context.toast("Only Aleph Email is allowed") // TODO copy
                                 }
                             ) ?: googleAuth.signInWithGoogle(
                                 filterByAuthorized = false,
@@ -109,7 +109,7 @@ object LoginScreen: Screen {
                                 onInvalidEmail = {
                                     validEmail = false
                                     googleAuth.signOut()
-                                    context.toast("Only Aleph Email is allowed")
+                                    context.toast("Only Aleph Email is allowed") // TODO copy
                                 }
                             )
                             loading = false
@@ -119,7 +119,7 @@ object LoginScreen: Screen {
             ) {
                 if (!loading) {
                     Text(
-                        text = "Sign-in with Google",
+                        text = "Sign-in with Google", // TODO copy
                         fontWeight = FontWeight.Bold
                     )
                 } else {

@@ -41,7 +41,7 @@
         </activity>
 
         <service
-            android:name=".base.service.AttendanceService"
+            android:name=".ui.checkin.CheckInService"
             android:foregroundServiceType="location"
             android:enabled="true"
             android:exported="false" />
