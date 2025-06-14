@@ -17,17 +17,15 @@ import dev.achmad.alephup.R
 import dev.achmad.alephup.base.MainApplication.Companion.requiredPermissions
 import dev.achmad.alephup.base.preferences.ApplicationPreferences
 import dev.achmad.alephup.ui.checkin.CheckInService
-import dev.achmad.alephup.ui.auth.SignInScreen
 import dev.achmad.alephup.ui.settings.Preference
 import dev.achmad.alephup.ui.settings.PreferenceScreen
 import dev.achmad.alephup.util.MultiplePermissionsState
 import dev.achmad.alephup.util.PermissionState
-import dev.achmad.alephup.util.extension.rememberFirebaseUser
 import dev.achmad.alephup.util.rememberIgnoreBatteryOptimizationPermissionState
 import dev.achmad.alephup.util.rememberMultiplePermissionsState
 import dev.achmad.alephup.util.rememberNotificationPermissionState
 import dev.achmad.core.util.extension.injectLazy
-import dev.achmad.data.auth.GoogleAuth
+import dev.achmad.data.auth.Auth
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,7 +36,6 @@ object SettingsScreen: Screen {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         var loading by remember { mutableStateOf(false) }
-        val applicationPreferences by remember { injectLazy<ApplicationPreferences>() }
         val locationPermissions = rememberMultiplePermissionsState(requiredPermissions)
         val notificationPermission = rememberNotificationPermissionState()
 
@@ -55,13 +52,12 @@ object SettingsScreen: Screen {
                         notificationPermission = notificationPermission,
                     ),
                     getBackgroundServiceGroup(
-                        applicationPreferences = applicationPreferences,
                         locationPermissions = locationPermissions,
                         notificationPermission = notificationPermission,
                     ),
                     getBatteryOptimizationGroup(),
                     getAccountGroup(
-                        onSignOut = { loading = true }
+                        onClickSignOut = { loading = true }
                     ),
                 )
             },
@@ -92,7 +88,6 @@ object SettingsScreen: Screen {
 
     @Composable
     private fun getBackgroundServiceGroup(
-        applicationPreferences: ApplicationPreferences,
         locationPermissions: MultiplePermissionsState,
         notificationPermission: PermissionState,
     ): Preference.PreferenceGroup {
@@ -111,13 +106,6 @@ object SettingsScreen: Screen {
                         true
                     }
                 ),
-                // hide run on boot because this needs location permission all the time
-//                Preference.PreferenceItem.SwitchPreference(
-//                    preference = applicationPreferences.runInBackgroundOnBoot(),
-//                    title = stringResource(R.string.start_service_on_boot),
-//                    subtitle = stringResource(R.string.start_service_on_boot_description),
-//                    enabled = locationPermissions.isAllPermissionsGranted() && notificationPermission.isGranted.value,
-//                ),
                 Preference.PreferenceItem.InfoPreference(
                     title = stringResource(R.string.allow_required_permission_to_enable_background_service)
                 )
@@ -142,33 +130,32 @@ object SettingsScreen: Screen {
 
     @Composable
     private fun getAccountGroup(
-        onSignOut: () -> Unit,
+        onClickSignOut: () -> Unit,
     ): Preference.PreferenceGroup {
-        val context = LocalActivity.currentOrThrow.applicationContext
-        val navigator = LocalNavigator.currentOrThrow
-        val user = rememberFirebaseUser()
         val scope = rememberCoroutineScope()
-        val googleAuth by remember { injectLazy<GoogleAuth>() }
+        val auth by remember { injectLazy<Auth>() }
+        val user = auth.getCurrentUser()
         return Preference.PreferenceGroup(
             title = stringResource(R.string.account),
             preferenceItems = listOf(
-                Preference.PreferenceItem.TextPreference(
+                Preference.PreferenceItem.AlertDialogPreference(
                     title = stringResource(R.string.sign_out),
                     titleColor = Color.Red,
                     subtitle = stringResource(
                         id = R.string.signed_in_as,
-                        user?.displayName ?: "Unknown Username", // TODO copy
-                        user?.email ?: "Unknown Email", // TODO copy
+                        formatArgs = arrayOf(
+                            user?.name ?: "Unknown Username", // TODO copy
+                            user?.email ?: "Unknown Email", // TODO copy
+                        )
                     ),
-                    onClick = {
+                    dialogTitle = "Sign out", // TODO copy
+                    dialogText = "After sign out, the app will stop running in the background.",
+                    onConfirm = {
                         scope.launch {
-                            onSignOut()
-                            CheckInService.stopService(context)
-                            googleAuth.signOut()
-                            navigator.popUntilRoot()
-                            navigator.replace(SignInScreen)
+                            onClickSignOut()
+                            auth.signOut()
                         }
-                    }
+                    },
                 )
             )
         )

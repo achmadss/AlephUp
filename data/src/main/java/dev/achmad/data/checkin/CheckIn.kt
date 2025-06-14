@@ -1,7 +1,6 @@
 package dev.achmad.data.checkin
 
-import dev.achmad.core.BASE_URL
-import dev.achmad.core.SSID_TARGET
+import dev.achmad.core.Constants
 import dev.achmad.core.device.wifi.WifiHelper
 import dev.achmad.core.device.wifi.WifiState
 import dev.achmad.core.network.GET
@@ -12,14 +11,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterIsInstance
@@ -44,7 +39,7 @@ class CheckIn {
     private val networkHelper by injectLazy<NetworkHelper>()
     private val checkInPreference by injectLazy<CheckInPreference>()
 
-    // Single source of truth
+    // source of truth
     private val _checkInResult = MutableSharedFlow<CheckInResult>(
         replay = 1, // StateFlow behavior - always has latest value
         onBufferOverflow = BufferOverflow.DROP_OLDEST
@@ -89,25 +84,25 @@ class CheckIn {
     private fun executeFlow(ssid: String): Flow<CheckInResult> = flow {
         emit(CheckInResult.Loading)
 
-        // Small delay for UX
+        // small delay for UX
         delay(500)
 
-        // Validate SSID
-        if (ssid != SSID_TARGET) {
+        // validate SSID
+        if (ssid != Constants.Device.Wifi.SSID_TARGET) {
             emit(CheckInResult.InvalidSSID)
             return@flow
         }
 
-        // Check if already checked in today
+        // check if already checked in today
         if (checkInPreference.checkedInToday()) {
             emit(CheckInResult.Success)
             return@flow
         }
 
-        // Perform network check-in
+        // perform network check-in
         try {
             val response = networkHelper.client.newCall(
-                GET("$BASE_URL?ssid=$ssid")
+                GET("${Constants.Network.BASE_URL}?ssid=$ssid") // TODO real endpoint
             ).await()
 
             if (response.isSuccessful) {

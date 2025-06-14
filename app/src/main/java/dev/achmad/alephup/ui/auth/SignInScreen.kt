@@ -16,12 +16,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -29,37 +25,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import cafe.adriel.voyager.core.screen.Screen
-import cafe.adriel.voyager.navigator.LocalNavigator
-import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.achmad.alephup.R
-import dev.achmad.alephup.ui.checkin.CheckInScreen
-import dev.achmad.alephup.util.extension.rememberFirebaseUser
-import dev.achmad.alephup.util.toast
-import dev.achmad.core.util.extension.injectLazy
-import dev.achmad.data.auth.GoogleAuth
-import kotlinx.coroutines.launch
 
 object SignInScreen: Screen {
     private fun readResolve(): Any = SignInScreen
 
     @Composable
     override fun Content() {
-        val navigator = LocalNavigator.currentOrThrow
-        val scope = rememberCoroutineScope()
         val context = LocalContext.current
-        val googleAuth by remember { injectLazy<GoogleAuth>() }
-        var loading by remember { mutableStateOf(false) }
-        var validEmail by remember { mutableStateOf(true) }
-        val user = rememberFirebaseUser()
-
-        LaunchedEffect(user) {
-            if (user != null && validEmail) {
-                navigator.popUntilRoot()
-                navigator.replace(CheckInScreen)
-                return@LaunchedEffect
-            }
-        }
+        val viewModel = viewModel<SignInScreenViewModel>()
+        val loading by viewModel.loading.collectAsState()
 
         Column(
             modifier = Modifier
@@ -89,31 +66,7 @@ object SignInScreen: Screen {
                 enabled = !loading,
                 onClick = {
                     if (!loading) {
-                        scope.launch {
-                            loading = true
-                            googleAuth.signInWithGoogle(
-                                filterByAuthorized = true,
-                                onValidEmail = {
-                                    validEmail = true
-                                },
-                                onInvalidEmail = {
-                                    validEmail = false
-                                    googleAuth.signOut()
-                                    context.toast("Only Aleph Email is allowed") // TODO copy
-                                }
-                            ) ?: googleAuth.signInWithGoogle(
-                                filterByAuthorized = false,
-                                onValidEmail = {
-                                    validEmail = true
-                                },
-                                onInvalidEmail = {
-                                    validEmail = false
-                                    googleAuth.signOut()
-                                    context.toast("Only Aleph Email is allowed") // TODO copy
-                                }
-                            )
-                            loading = false
-                        }
+                        viewModel.signIn(context)
                     }
                 }
             ) {

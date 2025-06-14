@@ -15,6 +15,7 @@ import androidx.compose.runtime.structuralEqualityPolicy
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.unit.dp
+import dev.achmad.alephup.ui.settings.widget.AlertDialogPreferenceWidget
 import dev.achmad.alephup.ui.settings.widget.EditTextPreferenceWidget
 import dev.achmad.alephup.ui.settings.widget.InfoWidget
 import dev.achmad.alephup.ui.settings.widget.ListPreferenceWidget
@@ -149,6 +150,19 @@ internal fun PreferenceItem(
                             }
                         }
                     },
+                )
+            }
+            is Preference.PreferenceItem.AlertDialogPreference -> {
+                AlertDialogPreferenceWidget(
+                    enabled = item.enabled,
+                    title = item.title,
+                    subtitle = item.subtitle,
+                    titleColor = item.titleColor,
+                    subtitleColor = item.subtitleColor,
+                    dialogTitle = item.dialogTitle,
+                    dialogText = item.dialogText,
+                    onConfirm = item.onConfirm,
+                    onCancel = item.onCancel
                 )
             }
             is Preference.PreferenceItem.TextPreference -> {

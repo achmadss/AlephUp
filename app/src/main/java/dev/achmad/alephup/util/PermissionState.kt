@@ -23,7 +23,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import cafe.adriel.voyager.navigator.currentOrThrow
-import dev.achmad.core.REQUEST_BATTERY_OPTIMIZATION_REQUEST_CODE
+import dev.achmad.core.Constants
 import dev.achmad.core.device.battery_optimization.BatteryOptimizationHelper
 import dev.achmad.core.util.extension.inject
 
@@ -208,7 +208,7 @@ fun rememberIgnoreBatteryOptimizationPermissionState(): PermissionState {
             requestPermission = {
                 activity.startActivityForResult(
                     batteryOptimizationHelper.requestBatteryOptimizationExclusion(),
-                    REQUEST_BATTERY_OPTIMIZATION_REQUEST_CODE
+                    Constants.Device.Battery.REQUEST_BATTERY_OPTIMIZATION_REQUEST_CODE
                 )
             }
         )

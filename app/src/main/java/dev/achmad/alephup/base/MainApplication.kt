@@ -5,7 +5,6 @@ import android.app.Application
 import android.os.Build
 import android.util.Log
 import dev.achmad.alephup.base.preferences.ApplicationPreferences
-import dev.achmad.alephup.ui.checkin.CheckInService
 import dev.achmad.alephup.di.appModule
 import dev.achmad.alephup.ui.checkin.CheckInNotifier
 import dev.achmad.alephup.util.arePermissionsAllowed

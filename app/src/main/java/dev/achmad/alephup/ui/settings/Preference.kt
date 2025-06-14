@@ -124,6 +124,22 @@ sealed class Preference {
             override val onValueChanged: suspend (value: Set<String>) -> Boolean = { true },
         ) : PreferenceItem<Set<String>>()
 
+        data class AlertDialogPreference(
+            override val title: String,
+            override val subtitle: String? = "%s",
+            override val visible: Boolean = true,
+            override val enabled: Boolean = true,
+            val titleColor: Color = Color.Unspecified,
+            val subtitleColor: Color = Color.Unspecified,
+            val dialogTitle: String,
+            val dialogText: String,
+            val onConfirm: () -> Unit,
+            val onCancel: () -> Unit = {},
+        ) : PreferenceItem<String>() {
+            override val icon: ImageVector? = null
+            override val onValueChanged: suspend (value: String) -> Boolean = { true }
+        }
+
         /**
          * A [PreferenceItem] that shows a EditText in the dialog.
          */

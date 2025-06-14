@@ -29,8 +29,11 @@ class CheckInService: Service() {
 
     override fun onCreate() {
         super.onCreate()
-        // Create and acquire wake lock
+
+        // initiate notifier
         notifier = CheckInNotifier(this)
+
+        // create and acquire wake lock
         val powerManager = getSystemService(POWER_SERVICE) as PowerManager
         wakeLock = powerManager.newWakeLock(
             PowerManager.PARTIAL_WAKE_LOCK,
@@ -41,6 +44,7 @@ class CheckInService: Service() {
     }
     
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // start notifying check-in results
         serviceScope.launch {
             checkIn.checkInResultSharedFlow.collect { result ->
                 notifier.notifyCheckInResult(result)
@@ -54,7 +58,7 @@ class CheckInService: Service() {
 
         isRunning = true
         
-        // If service is killed, restart it
+        // if service is killed, DO NOT restart it
         return START_NOT_STICKY
     }
     
@@ -63,7 +67,7 @@ class CheckInService: Service() {
     }
     
     override fun onDestroy() {
-        // Release wake lock
+        // release wake lock
         wakeLock?.let {
             if (it.isHeld) {
                 it.release()

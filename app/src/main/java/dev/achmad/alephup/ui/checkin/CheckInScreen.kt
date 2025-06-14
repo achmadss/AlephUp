@@ -42,7 +42,6 @@ import dev.achmad.alephup.R
 import dev.achmad.alephup.ui.components.AppBar
 import dev.achmad.alephup.ui.components.AppBarActions
 import dev.achmad.alephup.ui.settings.screens.SettingsScreen
-import dev.achmad.alephup.util.extension.rememberFirebaseUser
 import dev.achmad.core.util.extension.injectLazy
 import dev.achmad.data.checkin.CheckInPreference
 import dev.achmad.data.checkin.CheckInResult
@@ -58,7 +57,6 @@ object CheckInScreen: Screen {
         val viewModel = viewModel<CheckInScreenViewModel>()
         val state by viewModel.state.collectAsState()
         val checkInPreference by remember { injectLazy<CheckInPreference>() }
-        val user = rememberFirebaseUser()
 
         Scaffold(
             topBar = {
@@ -116,7 +114,12 @@ object CheckInScreen: Screen {
                 verticalArrangement = Arrangement.Center,
             ) {
                 Text(
-                    text = stringResource(R.string.greet, user?.displayName ?: "Unknown User"),
+                    text = stringResource(
+                        id = R.string.greet,
+                        formatArgs = arrayOf(
+                            viewModel.getCurrentUser()?.name ?: "Unknown User"
+                        )
+                    ),
                     style = MaterialTheme.typography.titleLarge
                 )
                 Spacer(modifier = Modifier.height(16.dp))
